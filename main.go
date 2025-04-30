@@ -7,7 +7,7 @@ import (
 
 const (
 	SheetImageSize = 426
-	SquareSize     = SheetImageSize / 6
+	SquareSize     = SheetImageSize / 3
 	ScreenWidth    = SquareSize * 8
 	ScreenHeight   = SquareSize * 8
 )

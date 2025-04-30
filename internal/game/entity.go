@@ -10,24 +10,24 @@ import (
 
 type Entity struct {
 	img       *ebiten.Image
-	tokenType uint
-	pieceType uint
-	colorType uint
+	tokenType uint8
+	pieceType uint8
+	colorType uint8
 }
 
 const (
-	TokenWhitePawn   uint = 0b10101001
-	TokenWhiteKnight uint = 0b01101010
-	TokenWhiteBishop uint = 0b01001011
-	TokenWhiteRook   uint = 0b10001100
-	TokenWhiteQueen  uint = 0b00101101
-	TokenWhiteKing   uint = 0b00001110
-	TokenBlackPawn   uint = 0b10110001
-	TokenBlackKnight uint = 0b01110010
-	TokenBlackBishop uint = 0b01010011
-	TokenBlackRook   uint = 0b10010100
-	TokenBlackQueen  uint = 0b00110101
-	TokenBlackKing   uint = 0b00010110
+	TokenWhitePawn   uint8 = 0b10101001
+	TokenWhiteKnight uint8 = 0b01101010
+	TokenWhiteBishop uint8 = 0b01001011
+	TokenWhiteRook   uint8 = 0b10001100
+	TokenWhiteQueen  uint8 = 0b00101101
+	TokenWhiteKing   uint8 = 0b00001110
+	TokenBlackPawn   uint8 = 0b10110001
+	TokenBlackKnight uint8 = 0b01110010
+	TokenBlackBishop uint8 = 0b01010011
+	TokenBlackRook   uint8 = 0b10010100
+	TokenBlackQueen  uint8 = 0b00110101
+	TokenBlackKing   uint8 = 0b00010110
 )
 
 var (
@@ -40,8 +40,8 @@ func (p *Entity) Draw(dst *ebiten.Image, op *ebiten.DrawImageOptions) {
 	dst.DrawImage(p.img, op)
 }
 
-func makeEntities(c shared.Configuration) map[uint]*Entity {
-	return map[uint]*Entity{
+func makeEntities(c shared.Configuration) map[uint8]*Entity {
+	return map[uint8]*Entity{
 		TokenWhitePawn & 0b00011111:   makeEntity(c, TokenWhitePawn),
 		TokenWhiteKnight & 0b00011111: makeEntity(c, TokenWhiteKnight),
 		TokenWhiteBishop & 0b00011111: makeEntity(c, TokenWhiteBishop),
@@ -56,9 +56,9 @@ func makeEntities(c shared.Configuration) map[uint]*Entity {
 		TokenBlackKing & 0b00011111:   makeEntity(c, TokenBlackKing),
 	}
 }
-func makeEntity(c shared.Configuration, tokenType uint) *Entity {
+func makeEntity(c shared.Configuration, tokenType uint8) *Entity {
 	entity := &Entity{
-		img:       ebiten.NewImage(c.SquareSize(), c.SquareSize()),
+		img:       ebiten.NewImage(int(c.SquareSize()), int(c.SquareSize())),
 		tokenType: tokenType,
 		pieceType: tokenType & 0b00000111,
 		colorType: tokenType & 0b00011000,

@@ -2,50 +2,32 @@ package piece
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"us.figge.chess/internal/shared"
-)
-
-const (
-	Pawn   uint = 0b00000001
-	Knight uint = 0b00000010
-	Bishop uint = 0b00000011
-	Rook   uint = 0b00000100
-	Queen  uint = 0b00000101
-	King   uint = 0b00000110
+	. "us.figge.chess/internal/shared"
 )
 
 type Piece struct {
-	c        shared.Configuration
-	token    shared.Token
-	rank     int
-	file     int
-	op       *ebiten.DrawImageOptions
-	captured bool
-	promoted bool
-	moved    bool
-	inCheck  bool
+	c     Configuration
+	token Token
+	rank  uint8
+	file  uint8
+	op    *ebiten.DrawImageOptions
 }
 
-func NewPiece(c shared.Configuration, pieceType uint, rank, file int) *Piece {
+func NewPiece(c Configuration, pieceType uint8) *Piece {
 	piece := &Piece{
-		c:        c,
-		token:    c.Token(pieceType),
-		rank:     rank,
-		file:     file,
-		captured: false,
-		promoted: false,
-		moved:    false,
-		inCheck:  false,
+		c:     c,
+		token: c.Token(pieceType),
+		rank:  0,
+		file:  0,
 	}
-	piece.Position(rank, file)
 	return piece
 }
 
-func (p *Piece) Draw(dst *ebiten.Image) {
-	p.token.Draw(dst, p.op)
+func (p *Piece) Draw(target *ebiten.Image) {
+	p.token.Draw(target, p.op)
 }
 
-func (p *Piece) Position(rank, file int) {
+func (p *Piece) Position(rank, file uint8) {
 	p.rank = rank
 	p.file = file
 	p.op = &ebiten.DrawImageOptions{}
