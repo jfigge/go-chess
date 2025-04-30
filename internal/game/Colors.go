@@ -4,38 +4,45 @@ import "image/color"
 
 func OptWhiteRGB(red, green, blue uint8) GameOptions {
 	return func(g *Game) {
-		g.white = &color.RGBA{R: red, G: green, B: blue, A: 0xff}
+		g.ColorScheme.white = &color.RGBA{R: red, G: green, B: blue, A: 0xff}
 	}
 }
 func OptBlackRGB(red, green, blue uint8) GameOptions {
 	return func(g *Game) {
-		g.black = &color.RGBA{R: red, G: green, B: blue, A: 0xff}
+		g.ColorScheme.black = &color.RGBA{R: red, G: green, B: blue, A: 0xff}
 	}
 }
 func OptValidRGBA(red, green, blue, alpha uint8) GameOptions {
 	return func(g *Game) {
-		g.valid = &color.RGBA{R: red, G: green, B: blue, A: alpha}
+		g.ColorScheme.valid = &color.RGBA{R: red, G: green, B: blue, A: alpha}
 	}
 }
-func OptInValidRGBA(red, green, blue, alpha uint8) GameOptions {
+func OptInvalidRGBA(red, green, blue, alpha uint8) GameOptions {
 	return func(g *Game) {
-		g.invalid = &color.RGBA{R: red, G: green, B: blue, A: alpha}
+		g.ColorScheme.invalid = &color.RGBA{R: red, G: green, B: blue, A: alpha}
+	}
+}
+func OptHighlightRGBA(red, green, blue, alpha uint8) GameOptions {
+	return func(g *Game) {
+		g.ColorScheme.highlight = &color.RGBA{R: red, G: green, B: blue, A: alpha}
 	}
 }
 
 type ColorScheme struct {
-	white   color.Color
-	black   color.Color
-	valid   color.Color
-	invalid color.Color
+	white     color.Color
+	black     color.Color
+	valid     color.Color
+	invalid   color.Color
+	highlight color.Color
 }
 
 func newColorScheme() *ColorScheme {
 	return &ColorScheme{
-		white:   &color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
-		black:   &color.RGBA{R: 0x88, G: 0x88, B: 0x88, A: 0xff},
-		valid:   &color.RGBA{R: 0x44, G: 0xff, B: 0x44, A: 0xff},
-		invalid: &color.RGBA{R: 0xff, G: 0x44, B: 0x44, A: 0xff},
+		white:     &color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
+		black:     &color.RGBA{R: 0x88, G: 0x88, B: 0x88, A: 0xff},
+		valid:     &color.RGBA{R: 0x44, G: 0xff, B: 0x44, A: 0xff},
+		invalid:   &color.RGBA{R: 0xff, G: 0x44, B: 0x44, A: 0xff},
+		highlight: &color.RGBA{R: 0x00, G: 0x00, B: 0xff, A: 0x11},
 	}
 }
 
@@ -50,4 +57,7 @@ func (c *ColorScheme) ColorValid() color.Color {
 }
 func (c *ColorScheme) ColorInvalid() color.Color {
 	return c.invalid
+}
+func (c *ColorScheme) ColorHighlight() color.Color {
+	return c.highlight
 }

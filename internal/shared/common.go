@@ -14,6 +14,7 @@ type Configuration interface {
 	ColorBlack() color.Color
 	ColorValid() color.Color
 	ColorInvalid() color.Color
+	ColorHighlight() color.Color
 }
 
 type Token interface {

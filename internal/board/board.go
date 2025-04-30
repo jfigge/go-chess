@@ -85,53 +85,44 @@ func (b *Board) SetFen(fen string) {
 	b.turn = White
 	b.fullMove = 0
 	b.halfMove = 0
+	b.enpassant = 0xff
 	b.players[0] = player.NewPlayer(Configuration(b), White)
 	b.players[1] = player.NewPlayer(Configuration(b), Black)
 	index := 0
-	for index < 64 && fen != "" {
-		p := fen[0]
-		fen = fen[1:]
-		switch p {
-		case '1', '2', '3', '4', '5', '6', '7', '8':
-			squares := int(p - '0')
-			for i := 0; i < squares; i++ {
-				b.board[index] = 0
+	parts := strings.Split(strings.TrimSpace(fen), " ")
+	if len(parts) > 0 && len(parts[0]) > 0 {
+		for i := 0; i < len(parts[0]); i++ {
+			c := parts[0][i]
+			switch c {
+			case '1', '2', '3', '4', '5', '6', '7', '8':
+				index += int(c - '0')
+			case '/':
+				continue
+			case ' ':
+				break
+			case 'K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p':
+				p := FenPieceMap[c]
+				b.board[index] = p
+				b.players[(p&Black)>>4].AddPiece(p, uint8(index%8+1), uint8((7-index/8)+1))
 				index++
 			}
-		case '/':
-			continue
-		case ' ':
-			break
-		case 'K', 'Q', 'R', 'B', 'N', 'P':
-			b.board[index] = FenPieceMap[p]
-			b.players[0].AddPiece(FenPieceMap[p], uint8(index%8+1), uint8((7-index/8)+1))
-			index++
-		case 'k', 'q', 'r', 'b', 'n', 'p':
-			b.board[index] = FenPieceMap[p]
-			b.players[1].AddPiece(FenPieceMap[p], uint8(index%8+1), uint8((7-index/8)+1))
-			index++
 		}
 	}
-	parts := strings.Split(strings.TrimSpace(fen), " ")
-	if len(parts) > 0 {
-		b.setTurn(parts[0])
-		parts = parts[1:]
+
+	if len(parts) > 1 && len(parts[1]) > 0 {
+		b.setTurn(parts[1])
 	}
-	if len(parts) > 0 {
-		b.setCastling(parts[0], b.players[0], b.players[1])
-		parts = parts[1:]
+	if len(parts) > 2 && len(parts[2]) > 0 {
+		b.setCastling(parts[2], b.players[0], b.players[1])
 	}
-	if len(parts) > 0 {
-		b.setEnpassant(parts[0])
-		parts = parts[1:]
+	if len(parts) > 3 && len(parts[3]) > 0 {
+		b.setEnpassant(parts[3])
 	}
-	if len(parts) > 0 {
-		b.setHalfMove(parts[0])
-		parts = parts[1:]
+	if len(parts) > 4 && len(parts[4]) > 0 {
+		b.setHalfMove(parts[4])
 	}
-	if len(parts) > 0 {
-		b.setFullMove(parts[0])
-		parts = parts[1:]
+	if len(parts) > 5 && len(parts[5]) > 0 {
+		b.setFullMove(parts[5])
 	}
 
 	fmt.Printf("Remaining fen: %s\n", fen)
