@@ -7,7 +7,7 @@ import (
 )
 
 type Player struct {
-	c      Configuration
+	Configuration
 	color  uint8
 	pieces []*piece.Piece
 	KSC    bool
@@ -16,23 +16,23 @@ type Player struct {
 
 func NewPlayer(c Configuration, color uint8) *Player {
 	player := &Player{
-		c:      c,
-		color:  color,
-		pieces: []*piece.Piece{},
-		KSC:    true,
-		QSC:    true,
+		Configuration: c,
+		color:         color,
+		pieces:        []*piece.Piece{},
+		KSC:           true,
+		QSC:           true,
 	}
 	return player
 }
 
 func (p *Player) Draw(target *ebiten.Image) {
-	for i := 0; i < len(p.pieces); i++ {
-		p.pieces[i].Draw(target)
+	for _, e := range p.pieces {
+		e.Draw(target)
 	}
 }
 
 func (p *Player) AddPiece(pieceType uint8, rank, file uint8) {
-	newPiece := piece.NewPiece(p.c, pieceType|p.color)
+	newPiece := piece.NewPiece(Configuration(p), pieceType|p.color)
 	newPiece.Position(rank, file)
 	p.pieces = append(p.pieces, newPiece)
 }

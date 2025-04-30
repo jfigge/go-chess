@@ -36,8 +36,8 @@ var (
 	sheet  = mustLoadImage("assets/pieces.png")
 )
 
-func (p *Entity) Draw(dst *ebiten.Image, op *ebiten.DrawImageOptions) {
-	dst.DrawImage(p.img, op)
+func (e *Entity) Draw(dst *ebiten.Image, op *ebiten.DrawImageOptions) {
+	dst.DrawImage(e.img, op)
 }
 
 func makeEntities(c shared.Configuration) map[uint8]*Entity {
@@ -86,3 +86,12 @@ func mustLoadImage(name string) *ebiten.Image {
 	}
 	return ebiten.NewImageFromImage(img)
 }
+
+func (e *Entity) IsPawn() bool   { return e.pieceType == shared.Pawn }
+func (e *Entity) IsKnight() bool { return e.pieceType == shared.Knight }
+func (e *Entity) IsBishop() bool { return e.pieceType == shared.Bishop }
+func (e *Entity) IsRook() bool   { return e.pieceType == shared.Rook }
+func (e *Entity) IsQueen() bool  { return e.pieceType == shared.Queen }
+func (e *Entity) IsKing() bool   { return e.pieceType == shared.King }
+func (e *Entity) IsWhite() bool  { return e.colorType == shared.White }
+func (e *Entity) IsBlack() bool  { return e.colorType == shared.Black }

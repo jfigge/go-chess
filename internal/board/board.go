@@ -18,7 +18,7 @@ func OptSetup(fen string) BoardOptions {
 }
 
 type Board struct {
-	c         Configuration
+	Configuration
 	op        *ebiten.DrawImageOptions
 	img       *ebiten.Image
 	players   [2]*player.Player
@@ -33,8 +33,8 @@ type Board struct {
 func NewBoard(c Configuration, options ...BoardOptions) *Board {
 	op := &ebiten.DrawImageOptions{}
 	board := &Board{
-		c:  c,
-		op: op,
+		Configuration: c,
+		op:            op,
 		players: [2]*player.Player{
 			player.NewPlayer(c, White),
 			player.NewPlayer(c, Black),
@@ -61,9 +61,9 @@ func (b *Board) Draw(target *ebiten.Image) {
 }
 
 func (b *Board) makeBoardImage() {
-	squareSize := int(b.c.SquareSize())
-	white := b.c.WhiteColor()
-	black := b.c.BlackColor()
+	squareSize := int(b.SquareSize())
+	white := b.ColorWhite()
+	black := b.ColorBlack()
 	b.img = ebiten.NewImage(squareSize*8, squareSize*8)
 	vector.DrawFilledRect(b.img, 0, 0, float32(squareSize*8), float32(squareSize*8), black, false)
 	s := float32(squareSize)
@@ -82,10 +82,12 @@ func (b *Board) Fen() string {
 func (b *Board) SetFen(fen string) {
 	b.fen = fen
 	b.board = [64]uint8{}
-	index := 0
 	b.turn = White
-	b.players[0] = player.NewPlayer(b.c, White)
-	b.players[1] = player.NewPlayer(b.c, Black)
+	b.fullMove = 0
+	b.halfMove = 0
+	b.players[0] = player.NewPlayer(Configuration(b), White)
+	b.players[1] = player.NewPlayer(Configuration(b), Black)
+	index := 0
 	for index < 64 && fen != "" {
 		p := fen[0]
 		fen = fen[1:]
@@ -110,7 +112,7 @@ func (b *Board) SetFen(fen string) {
 			index++
 		}
 	}
-	parts := strings.Split(fen, " ")
+	parts := strings.Split(strings.TrimSpace(fen), " ")
 	if len(parts) > 0 {
 		b.setTurn(parts[0])
 		parts = parts[1:]
@@ -140,7 +142,7 @@ func (b *Board) setTurn(turn string) {
 	if turn == "b" {
 		b.turn = Black
 	} else if turn != "w" {
-		fmt.Printf("Invalid turn fen: %s", turn)
+		fmt.Printf("Invalid turn fen: %s\n", turn)
 	}
 }
 func (b *Board) setCastling(castling string, white, black *player.Player) {
@@ -160,7 +162,7 @@ func (b *Board) setCastling(castling string, white, black *player.Player) {
 			bqsc = true
 		case '-': //ignore
 		default:
-			fmt.Printf("Invalid castling fen: %s", castling)
+			fmt.Printf("Invalid castling fen: %s\n", castling)
 		}
 	}
 	white.SetKingsideCastle(wksc)
@@ -175,20 +177,24 @@ func (b *Board) setEnpassant(enpassant string) {
 	default:
 		rank := uint(enpassant[1] - '0')
 		file := uint(enpassant[0] - 'a')
+		if rank < 1 || rank > 8 || file < 0 || file > 7 {
+			fmt.Printf("Invalid enpassant fen: %s\n", enpassant)
+			return
+		}
 		b.enpassant = uint8((rank-1)*8 + file)
 	}
 }
 func (b *Board) setHalfMove(halfMove string) {
 	halfMoveCount := uint8(0)
 	if _, err := fmt.Sscanf(halfMove, "%d", &halfMoveCount); err != nil {
-		fmt.Printf("Invalid halfmove fen: %s", halfMove)
+		fmt.Printf("Invalid halfmove fen: %s\n", halfMove)
 	}
 	b.halfMove = halfMoveCount
 }
 func (b *Board) setFullMove(fullMove string) {
 	fullMoveCount := uint(0)
 	if _, err := fmt.Sscanf(fullMove, "%d", &fullMoveCount); err != nil {
-		fmt.Printf("Invalid fullmove fen: %s", fullMove)
+		fmt.Printf("Invalid fullmove fen: %s\n", fullMove)
 	}
 	b.fullMove = fullMoveCount
 }

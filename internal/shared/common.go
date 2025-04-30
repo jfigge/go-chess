@@ -7,16 +7,25 @@ import (
 
 type Configuration interface {
 	SquareSize() uint
-	WhiteColor() color.Color
-	BlackColor() color.Color
-	CastleColor() color.Color
 	Translate(rank, file uint8) (float64, float64)
 	Token(pieceType uint8) Token
 	SheetImageSize() int
+	ColorWhite() color.Color
+	ColorBlack() color.Color
+	ColorValid() color.Color
+	ColorInvalid() color.Color
 }
 
 type Token interface {
 	Draw(target *ebiten.Image, op *ebiten.DrawImageOptions)
+	IsPawn() bool
+	IsKnight() bool
+	IsBishop() bool
+	IsRook() bool
+	IsQueen() bool
+	IsKing() bool
+	IsWhite() bool
+	IsBlack() bool
 }
 
 const (
