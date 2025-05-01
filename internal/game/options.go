@@ -13,3 +13,9 @@ func OptSheetImageSize(size int) GameOptions {
 		g.sheetImageSize = size
 	}
 }
+
+func OptFontHeight(height int) GameOptions {
+	return func(g *Game) {
+		g.fontHeight = uint(height)
+	}
+}

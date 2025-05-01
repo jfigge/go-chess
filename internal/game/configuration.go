@@ -1,9 +1,12 @@
 package game
 
-import "us.figge.chess/internal/shared"
+import (
+	"strings"
+	"us.figge.chess/internal/shared"
+)
 
 const (
-	notation = "ABCDEFGH"
+	notation = "abcdefgh"
 )
 
 func (g *Game) SquareSize() uint {
@@ -48,11 +51,31 @@ func (g *Game) TranslateIndexToXY(index uint8) (float64, float64) {
 	return x, y
 }
 
-func (g *Game) TransformRFtoN(rank, file uint8) string {
+func (g *Game) TranslateRFtoN(rank, file uint8) string {
 	if rank < 1 || rank > 8 || file < 1 || file > 8 {
 		return ""
 	}
 	return string(notation[file-1]) + string('1'+rank-1)
+}
+
+func (g *Game) TranslateNtoRF(n string) (uint8, uint8, bool) {
+	if len(n) != 2 {
+		return 0, 0, false
+	}
+	n = strings.ToLower(n)
+	file := n[0] - 'a' + 1
+	rank := n[1] - '1' + 1
+	if file < 1 || file > 8 || rank < 1 || rank > 8 {
+		return 0, 0, false
+	}
+	return rank, file, true
+}
+
+func (g *Game) TranslateNtoIndex(n string) (uint8, bool) {
+	if rank, file, ok := g.TranslateNtoRF(n); ok {
+		return g.TranslateRFtoIndex(rank, file), true
+	}
+	return 0xFF, false
 }
 
 // -- DEBUG -------------------------------------------------------------
@@ -67,4 +90,7 @@ func (g *Game) DebugX(rank uint8) int {
 
 func (g *Game) DebugY() int {
 	return g.debugY
+}
+func (g *Game) DebugFen() int {
+	return g.fenY
 }

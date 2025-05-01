@@ -5,6 +5,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"image"
 	_ "image/png"
+	"strings"
 	"us.figge.chess/internal/shared"
 )
 
@@ -12,6 +13,7 @@ type Entity struct {
 	img       *ebiten.Image
 	name      string
 	color     string
+	fen       string
 	tokenType uint8
 	pieceType uint8
 	colorType uint8
@@ -75,22 +77,30 @@ func makeEntity(c shared.Configuration, tokenType uint8) *Entity {
 	switch entity.pieceType {
 	case shared.Pawn:
 		entity.name = "Pawn"
+		entity.fen = "p"
 	case shared.Knight:
 		entity.name = "Knight"
+		entity.fen = "n"
 	case shared.Bishop:
 		entity.name = "Bishop"
+		entity.fen = "b"
 	case shared.Rook:
 		entity.name = "Rook"
+		entity.fen = "r"
 	case shared.Queen:
 		entity.name = "Queen"
+		entity.fen = "q"
 	case shared.King:
 		entity.name = "King"
+		entity.fen = "k"
 	}
 	switch entity.colorType {
 	case shared.White:
 		entity.color = "White"
+		entity.fen = strings.ToUpper(entity.fen)
 	case shared.Black:
 		entity.color = "Black"
+		entity.fen = strings.ToLower(entity.fen)
 	}
 	return entity
 }
@@ -121,4 +131,7 @@ func (e *Entity) Name() string {
 }
 func (e *Entity) Color() string {
 	return e.color
+}
+func (e *Entity) Fen() byte {
+	return e.fen[0]
 }

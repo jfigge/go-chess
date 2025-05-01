@@ -10,8 +10,8 @@ type Player struct {
 	Configuration
 	color  uint8
 	pieces []*piece.Piece
-	KSC    bool
-	QSC    bool
+	ksc    bool
+	qsc    bool
 }
 
 func NewPlayer(c Configuration, color uint8) *Player {
@@ -19,8 +19,8 @@ func NewPlayer(c Configuration, color uint8) *Player {
 		Configuration: c,
 		color:         color,
 		pieces:        []*piece.Piece{},
-		KSC:           true,
-		QSC:           true,
+		ksc:           true,
+		qsc:           true,
 	}
 	return player
 }
@@ -39,8 +39,14 @@ func (p *Player) AddPiece(pieceType uint8, rank, file uint8) *piece.Piece {
 }
 
 func (p *Player) SetKingsideCastle(ksc bool) {
-	p.KSC = ksc
+	p.ksc = ksc
 }
 func (p *Player) SetQueensideCastle(qsc bool) {
-	p.QSC = qsc
+	p.qsc = qsc
+}
+func (p *Player) KingsideCastle() bool {
+	return p.ksc
+}
+func (p *Player) QueensideCastle() bool {
+	return p.qsc
 }

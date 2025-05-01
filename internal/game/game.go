@@ -14,8 +14,10 @@ type Game struct {
 	squareSize     uint
 	sheetImageSize int
 	enabledDebug   bool
+	fontHeight     uint
 	debugY         int
 	debugX         [8]int
+	fenY           int
 }
 
 func NewGame(options ...GameOptions) *Game {
@@ -23,6 +25,7 @@ func NewGame(options ...GameOptions) *Game {
 		ColorScheme:  newColorScheme(),
 		squareSize:   64,
 		enabledDebug: true,
+		fontHeight:   16,
 	}
 	for _, option := range options {
 		option(game)
@@ -30,12 +33,14 @@ func NewGame(options ...GameOptions) *Game {
 	game.entities = makeEntities(game)
 	game.board = board.NewBoard(
 		game,
+		board.OptSetup("rn1qkbnr/pppp1ppp/b2Qp3/8/8/8/PPPPPPPP/RNB1KBNR b Qq c4"),
 		//board.OptSetup("r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1"),
 	)
 	for i := 0; i < 8; i++ {
 		game.debugX[i] = int(game.squareSize)*i + 2
 	}
 	game.debugY = int(game.squareSize*8 + 2)
+	game.fenY = int(game.squareSize*8 + game.fontHeight + 2)
 	return game
 }
 

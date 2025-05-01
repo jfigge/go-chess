@@ -94,6 +94,7 @@ func (b *Board) Draw(target *ebiten.Image) {
 				b.board[i].piece = b.dragPiece
 				b.board[b.dragIndex].piece = nil
 				p.Position(rank, file)
+				b.fen = b.Fen()
 			}
 			b.dragPiece.StopDrag()
 			b.dragPiece = nil
@@ -107,14 +108,22 @@ func (b *Board) Draw(target *ebiten.Image) {
 	if b.dragPiece != nil {
 		b.dragPiece.Draw(target)
 	}
-	if b.EnableDebug() && cursor != 0xff {
-		ebitenutil.DebugPrintAt(target, "Rank: "+b.TransformRFtoN(rank, file), b.DebugX(0), b.DebugY())
-		ebitenutil.DebugPrintAt(target, "Index: "+strconv.Itoa(int(cursor)), b.DebugX(1), b.DebugY())
-		p := b.board[cursor].piece
-		if p != nil {
-			ebitenutil.DebugPrintAt(target, p.Color(), b.DebugX(3), b.DebugY())
-			ebitenutil.DebugPrintAt(target, p.Name(), b.DebugX(4), b.DebugY())
+	if b.EnableDebug() {
+		if cursor != 0xff {
+			ebitenutil.DebugPrintAt(target, "Rank: "+b.TranslateRFtoN(rank, file), b.DebugX(0), b.DebugY())
+			ebitenutil.DebugPrintAt(target, "Index: "+strconv.Itoa(int(cursor)), b.DebugX(1), b.DebugY())
+			p := b.board[cursor].piece
+			if p != nil {
+				ebitenutil.DebugPrintAt(target, p.Color(), b.DebugX(2), b.DebugY())
+				ebitenutil.DebugPrintAt(target, p.Name(), b.DebugX(3), b.DebugY())
+			}
 		}
+		turn := "White"
+		if b.turn == Black {
+			turn = "Black"
+		}
+		ebitenutil.DebugPrintAt(target, "Turn: "+turn, b.DebugX(4), b.DebugY())
+		ebitenutil.DebugPrintAt(target, "Fen: "+b.fen, b.DebugX(0), b.DebugFen())
 	}
 }
 
