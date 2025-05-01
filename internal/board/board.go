@@ -1,24 +1,16 @@
 package board
 
 import (
-	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"image/color"
-	"strings"
+	"strconv"
 	"us.figge.chess/internal/piece"
 	"us.figge.chess/internal/player"
 	. "us.figge.chess/internal/shared"
 )
-
-type BoardOptions func(b *Board)
-
-func OptSetup(fen string) BoardOptions {
-	return func(b *Board) {
-		b.fen = fen
-	}
-}
 
 type square struct {
 	piece      *piece.Piece
@@ -33,15 +25,17 @@ type square struct {
 
 type Board struct {
 	Configuration
-	players         [2]*player.Player
-	dragPiece       *piece.Piece
-	turn            uint8
-	board           [64]square
-	enpassant       uint8
-	fullMove        uint
-	halfMove        uint8
-	fen             string
-	leftJustClicked bool
+	players        [2]*player.Player
+	dragPiece      *piece.Piece
+	dragIndex      uint8
+	turn           uint8
+	board          [64]square
+	enpassant      uint8
+	fullMove       uint
+	halfMove       uint8
+	fen            string
+	mouseDown      bool
+	mouseFirstDown bool
 }
 
 func NewBoard(c Configuration, options ...BoardOptions) *Board {
@@ -64,7 +58,18 @@ func NewBoard(c Configuration, options ...BoardOptions) *Board {
 }
 
 func (b *Board) Update() {
-	b.leftJustClicked = inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+	b.mouseFirstDown = inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+	b.mouseDown = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	//b.mouseFirstDown = false
+	//down := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	//if down && !b.mouseDown {
+	//	fmt.Println("Left mouse button pressed")
+	//	b.mouseFirstDown = true
+	//	b.mouseDown = true
+	//} else if !down && b.mouseDown {
+	//	fmt.Println("Left mouse button released")
+	//	b.mouseDown = false
+	//}
 }
 
 func (b *Board) Draw(target *ebiten.Image) {
@@ -79,31 +84,37 @@ func (b *Board) Draw(target *ebiten.Image) {
 	for i := uint8(0); i < 64; i++ {
 		highlighted := cursor == i
 		p := b.board[i].piece
-		if highlighted && b.leftJustClicked && p != nil && b.dragPiece == nil {
+		if highlighted && b.mouseFirstDown && p != nil && b.dragPiece == nil {
 			b.dragPiece = p
+			b.dragIndex = i
 			p.StartDrag()
-		} else if b.dragPiece != nil && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		} else if b.dragPiece != nil && !b.mouseDown && (cursor == i || cursor == 0xff) {
+			if p == nil {
+				p = b.dragPiece
+				b.board[i].piece = b.dragPiece
+				b.board[b.dragIndex].piece = nil
+				p.Position(rank, file)
+			}
 			b.dragPiece.StopDrag()
 			b.dragPiece = nil
+			b.dragIndex = 0xff
 		}
 		b.board[i].Draw(b, target, highlighted)
+		if p != nil && i != b.dragIndex {
+			p.Draw(target)
+		}
 	}
-	b.players[0].Draw(target)
-	b.players[1].Draw(target)
-}
-
-func (b *Board) resetBoard() {
-	for i := 0; i < 64; i++ {
-		b.board[i] = square{
-			background: b.ColorBlack(),
-			size:       float32(b.SquareSize()),
+	if b.dragPiece != nil {
+		b.dragPiece.Draw(target)
+	}
+	if b.EnableDebug() && cursor != 0xff {
+		ebitenutil.DebugPrintAt(target, "Rank: "+b.TransformRFtoN(rank, file), b.DebugX(0), b.DebugY())
+		ebitenutil.DebugPrintAt(target, "Index: "+strconv.Itoa(int(cursor)), b.DebugX(1), b.DebugY())
+		p := b.board[cursor].piece
+		if p != nil {
+			ebitenutil.DebugPrintAt(target, p.Color(), b.DebugX(3), b.DebugY())
+			ebitenutil.DebugPrintAt(target, p.Name(), b.DebugX(4), b.DebugY())
 		}
-		if i%2 == (i/8)%2 {
-			b.board[i].background = b.ColorWhite()
-		}
-		x, y := b.TranslateIndexToXY(uint8(i))
-		b.board[i].x = float32(x)
-		b.board[i].y = float32(y)
 	}
 }
 
@@ -122,112 +133,17 @@ func (s *square) Draw(b *Board, target *ebiten.Image, highlight bool) {
 	vector.DrawFilledRect(target, s.x, s.y, s.size, s.size, c, false)
 }
 
-func (b *Board) Fen() string {
-	return ""
-}
-func (b *Board) SetFen(fen string) {
-	b.fen = fen
-	b.turn = White
-	b.fullMove = 0
-	b.halfMove = 0
-	b.enpassant = 0xff
-	b.players[0] = player.NewPlayer(Configuration(b), White)
-	b.players[1] = player.NewPlayer(Configuration(b), Black)
-	b.resetBoard()
-	index := 0
-	parts := strings.Split(strings.TrimSpace(fen), " ")
-	if len(parts) > 0 && len(parts[0]) > 0 {
-		for i := 0; i < len(parts[0]); i++ {
-			c := parts[0][i]
-			switch c {
-			case '1', '2', '3', '4', '5', '6', '7', '8':
-				index += int(c - '0')
-			case '/':
-				continue
-			case ' ':
-				break
-			case 'K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p':
-				p := FenPieceMap[c]
-				rank, file := b.TranslateIndexToRF(uint8(index))
-				b.board[index].piece = b.players[(p&Black)>>4].AddPiece(p, rank, file)
-				index++
-			}
+func (b *Board) resetBoard() {
+	for i := 0; i < 64; i++ {
+		b.board[i] = square{
+			background: b.ColorBlack(),
+			size:       float32(b.SquareSize()),
 		}
-	}
-	if len(parts) > 1 && len(parts[1]) > 0 {
-		b.setTurn(parts[1])
-	}
-	if len(parts) > 2 && len(parts[2]) > 0 {
-		b.setCastling(parts[2], b.players[0], b.players[1])
-	}
-	if len(parts) > 3 && len(parts[3]) > 0 {
-		b.setEnpassant(parts[3])
-	}
-	if len(parts) > 4 && len(parts[4]) > 0 {
-		b.setHalfMove(parts[4])
-	}
-	if len(parts) > 5 && len(parts[5]) > 0 {
-		b.setFullMove(parts[5])
-	}
-}
-func (b *Board) setTurn(turn string) {
-	b.turn = White
-	if turn == "b" {
-		b.turn = Black
-	} else if turn != "w" {
-		fmt.Printf("Invalid turn fen: %s\n", turn)
-	}
-}
-func (b *Board) setCastling(castling string, white, black *player.Player) {
-	wksc := false
-	wqsc := false
-	bksc := false
-	bqsc := false
-	for _, c := range castling {
-		switch c {
-		case 'K':
-			wksc = true
-		case 'Q':
-			wqsc = true
-		case 'k':
-			bksc = true
-		case 'q':
-			bqsc = true
-		case '-': //ignore
-		default:
-			fmt.Printf("Invalid castling fen: %s\n", castling)
+		if i%2 == (i/8)%2 {
+			b.board[i].background = b.ColorWhite()
 		}
+		x, y := b.TranslateIndexToXY(uint8(i))
+		b.board[i].x = float32(x)
+		b.board[i].y = float32(y)
 	}
-	white.SetKingsideCastle(wksc)
-	white.SetQueensideCastle(wqsc)
-	black.SetKingsideCastle(bksc)
-	black.SetQueensideCastle(bqsc)
-}
-func (b *Board) setEnpassant(enpassant string) {
-	switch enpassant {
-	case "-":
-		b.enpassant = 0xff
-	default:
-		rank := uint(enpassant[1] - '0')
-		file := uint(enpassant[0] - 'a')
-		if rank < 1 || rank > 8 || file < 0 || file > 7 {
-			fmt.Printf("Invalid enpassant fen: %s\n", enpassant)
-			return
-		}
-		b.enpassant = uint8((rank-1)*8 + file)
-	}
-}
-func (b *Board) setHalfMove(halfMove string) {
-	halfMoveCount := uint8(0)
-	if _, err := fmt.Sscanf(halfMove, "%d", &halfMoveCount); err != nil {
-		fmt.Printf("Invalid halfmove fen: %s\n", halfMove)
-	}
-	b.halfMove = halfMoveCount
-}
-func (b *Board) setFullMove(fullMove string) {
-	fullMoveCount := uint(0)
-	if _, err := fmt.Sscanf(fullMove, "%d", &fullMoveCount); err != nil {
-		fmt.Printf("Invalid fullmove fen: %s\n", fullMove)
-	}
-	b.fullMove = fullMoveCount
 }

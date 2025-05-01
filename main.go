@@ -9,7 +9,7 @@ const (
 	SheetImageSize = 426
 	SquareSize     = SheetImageSize / 6
 	ScreenWidth    = SquareSize * 8
-	ScreenHeight   = SquareSize * 8
+	ScreenHeight   = SquareSize*8 + 20
 )
 
 func main() {

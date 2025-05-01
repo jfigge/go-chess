@@ -10,6 +10,8 @@ import (
 
 type Entity struct {
 	img       *ebiten.Image
+	name      string
+	color     string
 	tokenType uint8
 	pieceType uint8
 	colorType uint8
@@ -70,7 +72,26 @@ func makeEntity(c shared.Configuration, tokenType uint8) *Entity {
 	op.GeoM.Scale(scale, scale)
 	size := c.SheetImageSize()
 	entity.img.DrawImage(sheet.SubImage(image.Rect(x*size, y*size, (x+1)*size, (y+1)*size)).(*ebiten.Image), op)
-
+	switch entity.pieceType {
+	case shared.Pawn:
+		entity.name = "Pawn"
+	case shared.Knight:
+		entity.name = "Knight"
+	case shared.Bishop:
+		entity.name = "Bishop"
+	case shared.Rook:
+		entity.name = "Rook"
+	case shared.Queen:
+		entity.name = "Queen"
+	case shared.King:
+		entity.name = "King"
+	}
+	switch entity.colorType {
+	case shared.White:
+		entity.color = "White"
+	case shared.Black:
+		entity.color = "Black"
+	}
 	return entity
 }
 func mustLoadImage(name string) *ebiten.Image {
@@ -95,3 +116,9 @@ func (e *Entity) IsQueen() bool  { return e.pieceType == shared.Queen }
 func (e *Entity) IsKing() bool   { return e.pieceType == shared.King }
 func (e *Entity) IsWhite() bool  { return e.colorType == shared.White }
 func (e *Entity) IsBlack() bool  { return e.colorType == shared.Black }
+func (e *Entity) Name() string {
+	return e.name
+}
+func (e *Entity) Color() string {
+	return e.color
+}

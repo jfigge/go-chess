@@ -12,6 +12,11 @@ type Configuration interface {
 	TranslateRFtoIndex(rank, file uint8) uint8
 	TranslateIndexToRF(index uint8) (uint8, uint8)
 	TranslateIndexToXY(index uint8) (float64, float64)
+	TransformRFtoN(rank, file uint8) string
+
+	EnableDebug() bool
+	DebugX(rank uint8) int
+	DebugY() int
 
 	Token(pieceType uint8) Token
 	SheetImageSize() int
@@ -24,6 +29,8 @@ type Configuration interface {
 
 type Token interface {
 	Draw(target *ebiten.Image, op *ebiten.DrawImageOptions)
+	Name() string
+	Color() string
 	IsPawn() bool
 	IsKnight() bool
 	IsBishop() bool
