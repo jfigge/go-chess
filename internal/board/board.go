@@ -3,8 +3,11 @@ package board
 import (
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"image/color"
 	"strings"
+	"us.figge.chess/internal/piece"
 	"us.figge.chess/internal/player"
 	. "us.figge.chess/internal/shared"
 )
@@ -17,24 +20,33 @@ func OptSetup(fen string) BoardOptions {
 	}
 }
 
+type square struct {
+	piece      *piece.Piece
+	background color.Color
+	highlight  bool
+	valid      bool
+	invalid    bool
+	x          float32
+	y          float32
+	size       float32
+}
+
 type Board struct {
 	Configuration
-	op        *ebiten.DrawImageOptions
-	img       *ebiten.Image
-	players   [2]*player.Player
-	turn      uint8
-	board     [64]uint8
-	enpassant uint8
-	fullMove  uint
-	halfMove  uint8
-	fen       string
+	players         [2]*player.Player
+	dragPiece       *piece.Piece
+	turn            uint8
+	board           [64]square
+	enpassant       uint8
+	fullMove        uint
+	halfMove        uint8
+	fen             string
+	leftJustClicked bool
 }
 
 func NewBoard(c Configuration, options ...BoardOptions) *Board {
-	op := &ebiten.DrawImageOptions{}
 	board := &Board{
 		Configuration: c,
-		op:            op,
 		players: [2]*player.Player{
 			player.NewPlayer(c, White),
 			player.NewPlayer(c, Black),
@@ -47,47 +59,81 @@ func NewBoard(c Configuration, options ...BoardOptions) *Board {
 	for _, option := range options {
 		option(board)
 	}
-	board.makeBoardImage()
 	board.SetFen(board.fen)
 	return board
 }
 
-func (b *Board) Draw(target *ebiten.Image) {
-	// Draw the board
-	img := ebiten.NewImageFromImage(b.img)
-	b.players[0].Draw(img)
-	b.players[1].Draw(img)
-	target.DrawImage(img, b.op)
+func (b *Board) Update() {
+	b.leftJustClicked = inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
 }
 
-func (b *Board) makeBoardImage() {
-	squareSize := int(b.SquareSize())
-	white := b.ColorWhite()
-	black := b.ColorBlack()
-	b.img = ebiten.NewImage(squareSize*8, squareSize*8)
-	vector.DrawFilledRect(b.img, 0, 0, float32(squareSize*8), float32(squareSize*8), black, false)
-	s := float32(squareSize)
-	for i := 0; i < 8; i += 2 {
-		for j := 0; j < 8; j += 2 {
-			vector.DrawFilledRect(b.img, float32(i*squareSize), float32(j*squareSize), s, s, white, false)
-			vector.DrawFilledRect(b.img, float32((i+1)*squareSize), float32((j+1)*squareSize), s, s, white, false)
-		}
+func (b *Board) Draw(target *ebiten.Image) {
+	var ok bool
+	var rank uint8
+	var file uint8
+	cursor := uint8(0xff)
+	x, y := ebiten.CursorPosition()
+	if rank, file, ok = b.TranslateXYtoRF(x, y); ok {
+		cursor = b.TranslateRFtoIndex(rank, file)
 	}
+	for i := uint8(0); i < 64; i++ {
+		highlighted := cursor == i
+		p := b.board[i].piece
+		if highlighted && b.leftJustClicked && p != nil && b.dragPiece == nil {
+			b.dragPiece = p
+			p.StartDrag()
+		} else if b.dragPiece != nil && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			b.dragPiece.StopDrag()
+			b.dragPiece = nil
+		}
+		b.board[i].Draw(b, target, highlighted)
+	}
+	b.players[0].Draw(target)
+	b.players[1].Draw(target)
+}
+
+func (b *Board) resetBoard() {
+	for i := 0; i < 64; i++ {
+		b.board[i] = square{
+			background: b.ColorBlack(),
+			size:       float32(b.SquareSize()),
+		}
+		if i%2 == (i/8)%2 {
+			b.board[i].background = b.ColorWhite()
+		}
+		x, y := b.TranslateIndexToXY(uint8(i))
+		b.board[i].x = float32(x)
+		b.board[i].y = float32(y)
+	}
+}
+
+func (s *square) Draw(b *Board, target *ebiten.Image, highlight bool) {
+	c := s.background
+	if highlight {
+		c = b.ColorHighlight()
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			c = b.ColorInvalid()
+		}
+	} else if s.valid {
+		c = b.ColorValid()
+	} else if s.invalid {
+		c = b.ColorInvalid()
+	}
+	vector.DrawFilledRect(target, s.x, s.y, s.size, s.size, c, false)
 }
 
 func (b *Board) Fen() string {
 	return ""
 }
-
 func (b *Board) SetFen(fen string) {
 	b.fen = fen
-	b.board = [64]uint8{}
 	b.turn = White
 	b.fullMove = 0
 	b.halfMove = 0
 	b.enpassant = 0xff
 	b.players[0] = player.NewPlayer(Configuration(b), White)
 	b.players[1] = player.NewPlayer(Configuration(b), Black)
+	b.resetBoard()
 	index := 0
 	parts := strings.Split(strings.TrimSpace(fen), " ")
 	if len(parts) > 0 && len(parts[0]) > 0 {
@@ -102,13 +148,12 @@ func (b *Board) SetFen(fen string) {
 				break
 			case 'K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p':
 				p := FenPieceMap[c]
-				b.board[index] = p
-				b.players[(p&Black)>>4].AddPiece(p, uint8(index%8+1), uint8((7-index/8)+1))
+				rank, file := b.TranslateIndexToRF(uint8(index))
+				b.board[index].piece = b.players[(p&Black)>>4].AddPiece(p, rank, file)
 				index++
 			}
 		}
 	}
-
 	if len(parts) > 1 && len(parts[1]) > 0 {
 		b.setTurn(parts[1])
 	}
@@ -124,10 +169,7 @@ func (b *Board) SetFen(fen string) {
 	if len(parts) > 5 && len(parts[5]) > 0 {
 		b.setFullMove(parts[5])
 	}
-
-	fmt.Printf("Remaining fen: %s\n", fen)
 }
-
 func (b *Board) setTurn(turn string) {
 	b.turn = White
 	if turn == "b" {

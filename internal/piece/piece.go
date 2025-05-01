@@ -8,9 +8,12 @@ import (
 type Piece struct {
 	Configuration
 	Token
-	rank uint8
-	file uint8
-	op   *ebiten.DrawImageOptions
+	rank     uint8
+	file     uint8
+	dragging bool
+	dx       float64
+	dy       float64
+	op       *ebiten.DrawImageOptions
 }
 
 func NewPiece(c Configuration, pieceType uint8) *Piece {
@@ -19,11 +22,17 @@ func NewPiece(c Configuration, pieceType uint8) *Piece {
 		Token:         c.Token(pieceType),
 		rank:          0,
 		file:          0,
+		op:            &ebiten.DrawImageOptions{},
 	}
 	return piece
 }
 
 func (p *Piece) Draw(target *ebiten.Image) {
+	if p.dragging {
+		p.op.GeoM.Reset()
+		x, y := ebiten.CursorPosition()
+		p.op.GeoM.Translate(float64(x)-p.dx, float64(y)-p.dy)
+	}
 	p.Token.Draw(target, p.op)
 }
 
@@ -37,7 +46,29 @@ func (p *Piece) File() uint8 {
 func (p *Piece) Position(rank, file uint8) {
 	p.rank = rank
 	p.file = file
-	p.op = &ebiten.DrawImageOptions{}
-	x, y := p.Translate(rank, file)
+	p.op.GeoM.Reset()
+	x, y := p.TranslateRFtoXY(rank, file)
 	p.op.GeoM.Translate(x, y)
+	p.dragging = false
+}
+
+func (p *Piece) StartDrag() {
+	if !p.dragging {
+		p.dragging = true
+		x, y := ebiten.CursorPosition()
+		originX, originY := p.TranslateRFtoXY(p.rank, p.file)
+		p.dx = float64(x) - originX
+		p.dy = float64(y) - originY
+	}
+}
+
+func (p *Piece) IsDragging() bool {
+	return p.dragging
+}
+
+func (p *Piece) StopDrag() {
+	if p.dragging {
+		p.dragging = true
+		p.Position(p.rank, p.file)
+	}
 }

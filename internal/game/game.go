@@ -1,7 +1,9 @@
 package game
 
 import (
+	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"us.figge.chess/internal/board"
 	"us.figge.chess/internal/shared"
 )
@@ -39,7 +41,7 @@ func NewGame(options ...GameOptions) *Game {
 	game.entities = makeEntities(game)
 	game.board = board.NewBoard(
 		game,
-		board.OptSetup("r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1"),
+		//board.OptSetup("r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1"),
 	)
 	game.highlight = ebiten.NewImage(int(game.SquareSize()), int(game.SquareSize()))
 	game.highlight.Fill(game.ColorHighlight())
@@ -48,24 +50,15 @@ func NewGame(options ...GameOptions) *Game {
 
 func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyQ) {
-		_ = ebiten.Termination
+		return ebiten.Termination
 	}
+	g.board.Update()
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	g.board.Draw(screen)
-	mx, my := ebiten.CursorPosition()
-	mr := (my - 1) / int(g.squareSize)
-	mf := (mx - 1) / int(g.squareSize)
-	if mr >= 0 && mr < 8 && mf >= 0 && mf < 8 {
-		g.highlight.Clear()
-		g.highlight.Fill(g.ColorHighlight())
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(float64(mf*int(g.squareSize)), float64(mr*int(g.squareSize)))
-		screen.DrawImage(g.highlight, op)
-	}
-
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("FPS: %0.2f", ebiten.ActualFPS()), 0, 0)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -75,6 +68,28 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 func (g *Game) SquareSize() uint                   { return g.squareSize }
 func (g *Game) Token(pieceType uint8) shared.Token { return g.entities[pieceType] }
 func (g *Game) SheetImageSize() int                { return g.sheetImageSize }
-func (g *Game) Translate(rank, file uint8) (float64, float64) {
+func (g *Game) TranslateRFtoXY(rank, file uint8) (float64, float64) {
 	return float64(uint(rank-1) * g.squareSize), float64(uint(8-file) * g.squareSize)
+}
+func (g *Game) TranslateXYtoRF(x, y int) (uint8, uint8, bool) {
+	rank := uint8(float32(x-1)/float32(g.squareSize)) + 1
+	file := 8 - uint8(float32(y-2)/float32(g.squareSize))
+	if rank < 1 || rank > 8 || file < 1 || file > 8 {
+		return 0, 0, false
+	}
+	return rank, file, true
+}
+func (g *Game) TranslateRFtoIndex(rank, file uint8) uint8 {
+	index := (8-file)*8 + rank - 1
+	return index
+}
+func (g *Game) TranslateIndexToRF(index uint8) (uint8, uint8) {
+	rank := index%8 + 1
+	file := 8 - index/8
+	return rank, file
+}
+func (g *Game) TranslateIndexToXY(index uint8) (float64, float64) {
+	rank, file := g.TranslateIndexToRF(index)
+	x, y := g.TranslateRFtoXY(rank, file)
+	return x, y
 }

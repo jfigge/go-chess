@@ -31,10 +31,11 @@ func (p *Player) Draw(target *ebiten.Image) {
 	}
 }
 
-func (p *Player) AddPiece(pieceType uint8, rank, file uint8) {
+func (p *Player) AddPiece(pieceType uint8, rank, file uint8) *piece.Piece {
 	newPiece := piece.NewPiece(Configuration(p), pieceType|p.color)
 	newPiece.Position(rank, file)
 	p.pieces = append(p.pieces, newPiece)
+	return newPiece
 }
 
 func (p *Player) SetKingsideCastle(ksc bool) {

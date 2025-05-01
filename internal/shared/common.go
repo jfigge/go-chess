@@ -7,7 +7,12 @@ import (
 
 type Configuration interface {
 	SquareSize() uint
-	Translate(rank, file uint8) (float64, float64)
+	TranslateRFtoXY(rank, file uint8) (float64, float64)
+	TranslateXYtoRF(x, y int) (uint8, uint8, bool)
+	TranslateRFtoIndex(rank, file uint8) uint8
+	TranslateIndexToRF(index uint8) (uint8, uint8)
+	TranslateIndexToXY(index uint8) (float64, float64)
+
 	Token(pieceType uint8) Token
 	SheetImageSize() int
 	ColorWhite() color.Color
