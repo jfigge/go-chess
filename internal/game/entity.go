@@ -70,7 +70,7 @@ func makeEntity(c shared.Configuration, tokenType uint8) *Entity {
 	x := int(tokenType >> 5)
 	y := int((tokenType >> 4) & 0b00000001)
 	scale := float64(c.SquareSize()) / float64(c.SheetImageSize())
-	op := &ebiten.DrawImageOptions{}
+	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
 	op.GeoM.Scale(scale, scale)
 	size := c.SheetImageSize()
 	entity.img.DrawImage(sheet.SubImage(image.Rect(x*size, y*size, (x+1)*size, (y+1)*size)).(*ebiten.Image), op)
