@@ -8,8 +8,8 @@ import (
 type Piece struct {
 	Configuration
 	Token
-	rank     uint8
-	file     uint8
+	rank     int
+	file     int
 	dragging bool
 	dx       float64
 	dy       float64
@@ -36,14 +36,14 @@ func (p *Piece) Draw(target *ebiten.Image) {
 	p.Token.Draw(target, p.op)
 }
 
-func (p *Piece) Rank() uint8 {
+func (p *Piece) Rank() int {
 	return p.rank
 }
-func (p *Piece) File() uint8 {
+func (p *Piece) File() int {
 	return p.file
 }
 
-func (p *Piece) Position(rank, file uint8) {
+func (p *Piece) Position(rank, file int) {
 	p.rank = rank
 	p.file = file
 	p.op.GeoM.Reset()

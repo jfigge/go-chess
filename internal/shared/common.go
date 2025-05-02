@@ -6,18 +6,18 @@ import (
 )
 
 type Configuration interface {
-	SquareSize() uint
-	TranslateRFtoXY(rank, file uint8) (float64, float64)
-	TranslateXYtoRF(x, y int) (uint8, uint8, bool)
-	TranslateRFtoIndex(rank, file uint8) uint8
-	TranslateIndexToRF(index uint8) (uint8, uint8)
-	TranslateIndexToXY(index uint8) (float64, float64)
-	TranslateRFtoN(rank, file uint8) string
-	TranslateNtoRF(notation string) (uint8, uint8, bool)
-	TranslateNtoIndex(notation string) (uint8, bool)
+	SquareSize() int
+	TranslateRFtoXY(rank, file int) (float64, float64)
+	TranslateXYtoRF(x, y int) (int, int, bool)
+	TranslateRFtoIndex(rank, file int) int
+	TranslateIndexToRF(index int) (int, int)
+	TranslateIndexToXY(index int) (float64, float64)
+	TranslateRFtoN(rank, file int) string
+	TranslateNtoRF(notation string) (int, int, bool)
+	TranslateNtoIndex(notation string) (int, bool)
 
 	EnableDebug() bool
-	DebugX(rank uint8) int
+	DebugX(rank int) int
 	DebugY() int
 	DebugFen() int
 
@@ -46,28 +46,28 @@ type Token interface {
 }
 
 const (
-	White uint8 = 0b00001000
-	Black uint8 = 0b00010000
+	White uint8 = 0b00000000
+	Black uint8 = 0b00000001
 
-	Pawn   uint8 = 0b00000001
-	Knight uint8 = 0b00000010
-	Bishop uint8 = 0b00000011
-	Rook   uint8 = 0b00000100
-	Queen  uint8 = 0b00000101
-	King   uint8 = 0b00000110
+	Pawn   uint8 = 0b0000000
+	Knight uint8 = 0b0000010
+	Bishop uint8 = 0b0000100
+	Rook   uint8 = 0b0000110
+	Queen  uint8 = 0b0001000
+	King   uint8 = 0b0001010
 )
 
 var FenPieceMap = map[byte]uint8{
 	'p': Pawn | Black,
-	'r': Rook | Black,
 	'n': Knight | Black,
 	'b': Bishop | Black,
+	'r': Rook | Black,
 	'q': Queen | Black,
 	'k': King | Black,
 	'P': Pawn | White,
-	'R': Rook | White,
 	'N': Knight | White,
 	'B': Bishop | White,
+	'R': Rook | White,
 	'Q': Queen | White,
 	'K': King | White,
 }

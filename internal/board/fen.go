@@ -15,7 +15,7 @@ func (b *Board) Fen() string {
 	count := 0
 	for i := 0; i < 8; i++ {
 		for j := 0; j < 8; j++ {
-			p := b.board[index].piece
+			p := b.squares[index].piece
 			if p != nil {
 				b.WriteFenEntry(&sb, &count, p)
 			} else {
@@ -96,16 +96,8 @@ func (b *Board) WriteFullMove(sb *strings.Builder) {
 }
 
 func (b *Board) SetFen(fen string) {
-	b.fen = fen
-	b.turn = White
-	b.fullMove = 0
-	b.halfMove = 0
-	b.enpassant = 0xff
-	b.dragIndex = 0xff
-	b.dragPiece = nil
-	b.players[0] = player.NewPlayer(Configuration(b), White)
-	b.players[1] = player.NewPlayer(Configuration(b), Black)
 	b.resetBoard()
+	b.fen = fen
 	index := 0
 	parts := strings.Split(strings.TrimSpace(fen), " ")
 	if len(parts) > 0 && len(parts[0]) > 0 {
@@ -120,8 +112,8 @@ func (b *Board) SetFen(fen string) {
 				break
 			case 'K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p':
 				p := FenPieceMap[c]
-				rank, file := b.TranslateIndexToRF(uint8(index))
-				b.board[index].piece = b.players[(p&Black)>>4].AddPiece(p, rank, file)
+				rank, file := b.TranslateIndexToRF(index)
+				b.squares[index].piece = b.players[p&0b1].AddPiece(p&0b1110, rank, file)
 				index++
 			}
 		}
@@ -188,14 +180,14 @@ func (b *Board) setEnpassant(enpassant string) {
 	}
 }
 func (b *Board) setHalfMove(halfMove string) {
-	halfMoveCount := uint8(0)
+	halfMoveCount := 0
 	if _, err := fmt.Sscanf(halfMove, "%d", &halfMoveCount); err != nil {
 		fmt.Printf("Invalid halfmove fen: %s\n", halfMove)
 	}
 	b.halfMove = halfMoveCount
 }
 func (b *Board) setFullMove(fullMove string) {
-	fullMoveCount := uint(0)
+	fullMoveCount := 0
 	if _, err := fmt.Sscanf(fullMove, "%d", &fullMoveCount); err != nil {
 		fmt.Printf("Invalid fullmove fen: %s\n", fullMove)
 	}

@@ -9,7 +9,7 @@ const (
 	notation = "abcdefgh"
 )
 
-func (g *Game) SquareSize() uint {
+func (g *Game) SquareSize() int {
 	return g.squareSize
 }
 
@@ -21,57 +21,57 @@ func (g *Game) SheetImageSize() int {
 	return g.sheetImageSize
 }
 
-func (g *Game) TranslateRFtoXY(rank, file uint8) (float64, float64) {
-	return float64(uint(rank-1) * g.squareSize), float64(uint(8-file) * g.squareSize)
+func (g *Game) TranslateRFtoXY(rank, file int) (float64, float64) {
+	return float64((rank - 1) * g.squareSize), float64((8 - file) * g.squareSize)
 }
 
-func (g *Game) TranslateXYtoRF(x, y int) (uint8, uint8, bool) {
-	rank := uint8(float32(x-1)/float32(g.squareSize)) + 1
-	file := 8 - uint8(float32(y-2)/float32(g.squareSize))
+func (g *Game) TranslateXYtoRF(x, y int) (int, int, bool) {
+	rank := int(float32(x-1)/float32(g.squareSize)) + 1
+	file := 8 - int(float32(y-2)/float32(g.squareSize))
 	if rank < 1 || rank > 8 || file < 1 || file > 8 {
 		return 0, 0, false
 	}
 	return rank, file, true
 }
 
-func (g *Game) TranslateRFtoIndex(rank, file uint8) uint8 {
+func (g *Game) TranslateRFtoIndex(rank, file int) int {
 	index := (8-file)*8 + rank - 1
 	return index
 }
 
-func (g *Game) TranslateIndexToRF(index uint8) (uint8, uint8) {
+func (g *Game) TranslateIndexToRF(index int) (int, int) {
 	rank := index%8 + 1
 	file := 8 - index/8
 	return rank, file
 }
 
-func (g *Game) TranslateIndexToXY(index uint8) (float64, float64) {
+func (g *Game) TranslateIndexToXY(index int) (float64, float64) {
 	rank, file := g.TranslateIndexToRF(index)
 	x, y := g.TranslateRFtoXY(rank, file)
 	return x, y
 }
 
-func (g *Game) TranslateRFtoN(rank, file uint8) string {
+func (g *Game) TranslateRFtoN(rank, file int) string {
 	if rank < 1 || rank > 8 || file < 1 || file > 8 {
 		return ""
 	}
-	return string(notation[file-1]) + string('1'+rank-1)
+	return string(notation[file-1]) + string('1'+uint8(rank-1))
 }
 
-func (g *Game) TranslateNtoRF(n string) (uint8, uint8, bool) {
+func (g *Game) TranslateNtoRF(n string) (int, int, bool) {
 	if len(n) != 2 {
 		return 0, 0, false
 	}
 	n = strings.ToLower(n)
-	file := n[0] - 'a' + 1
-	rank := n[1] - '1' + 1
+	file := int(n[0] - 'a' + 1)
+	rank := int(n[1] - '1' + 1)
 	if file < 1 || file > 8 || rank < 1 || rank > 8 {
 		return 0, 0, false
 	}
 	return rank, file, true
 }
 
-func (g *Game) TranslateNtoIndex(n string) (uint8, bool) {
+func (g *Game) TranslateNtoIndex(n string) (int, bool) {
 	if rank, file, ok := g.TranslateNtoRF(n); ok {
 		return g.TranslateRFtoIndex(rank, file), true
 	}
@@ -81,10 +81,10 @@ func (g *Game) TranslateNtoIndex(n string) (uint8, bool) {
 // -- DEBUG -------------------------------------------------------------
 
 func (g *Game) EnableDebug() bool {
-	return g.enabledDebug
+	return g.debugEnabled
 }
 
-func (g *Game) DebugX(rank uint8) int {
+func (g *Game) DebugX(rank int) int {
 	return g.debugX[rank]
 }
 

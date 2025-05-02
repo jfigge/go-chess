@@ -9,8 +9,6 @@ const (
 	FontHeight     = 16
 	SheetImageSize = 426
 	SquareSize     = SheetImageSize / 6
-	ScreenWidth    = SquareSize * 8
-	ScreenHeight   = SquareSize*8 + FontHeight*2 + 2
 )
 
 func main() {
@@ -20,8 +18,8 @@ func main() {
 		game.OptWhiteRGB(0xf1, 0xd9, 0xc0),
 		game.OptBlackRGB(0xa9, 0x7a, 0x65),
 		game.OptFontHeight(FontHeight),
+		game.OptEnableDebug(true),
 	)
-	ebiten.SetWindowSize(ScreenWidth, ScreenHeight)
 	ebiten.SetWindowTitle("Lutefisk Chess Engine 1.0")
 
 	err := ebiten.RunGame(g)

@@ -2,7 +2,7 @@ package game
 
 type GameOptions func(g *Game)
 
-func OptSquareSize(size uint) GameOptions {
+func OptSquareSize(size int) GameOptions {
 	return func(g *Game) {
 		g.squareSize = size
 	}
@@ -16,6 +16,12 @@ func OptSheetImageSize(size int) GameOptions {
 
 func OptFontHeight(height int) GameOptions {
 	return func(g *Game) {
-		g.fontHeight = uint(height)
+		g.fontHeight = height
+	}
+}
+
+func OptEnableDebug(enabled bool) GameOptions {
+	return func(g *Game) {
+		g.debugEnabled = enabled
 	}
 }

@@ -26,16 +26,16 @@ type square struct {
 type Board struct {
 	Configuration
 	players        [2]*player.Player
-	dragPiece      *piece.Piece
-	dragIndex      uint8
+	squares        [64]square
 	turn           uint8
-	board          [64]square
-	enpassant      uint8
-	fullMove       uint
-	halfMove       uint8
+	enpassant      int
+	fullMove       int
+	halfMove       int
 	fen            string
 	mouseDown      bool
 	mouseFirstDown bool
+	dragPiece      *piece.Piece
+	dragIndex      int
 }
 
 func NewBoard(c Configuration, options ...BoardOptions) *Board {
@@ -74,16 +74,16 @@ func (b *Board) Update() {
 
 func (b *Board) Draw(target *ebiten.Image) {
 	var ok bool
-	var rank uint8
-	var file uint8
-	cursor := uint8(0xff)
+	var rank int
+	var file int
+	cursor := -1
 	x, y := ebiten.CursorPosition()
 	if rank, file, ok = b.TranslateXYtoRF(x, y); ok {
 		cursor = b.TranslateRFtoIndex(rank, file)
 	}
-	for i := uint8(0); i < 64; i++ {
+	for i := 0; i < 64; i++ {
 		highlighted := cursor == i
-		p := b.board[i].piece
+		p := b.squares[i].piece
 		if highlighted && b.mouseFirstDown && p != nil && b.dragPiece == nil {
 			b.dragPiece = p
 			b.dragIndex = i
@@ -91,16 +91,16 @@ func (b *Board) Draw(target *ebiten.Image) {
 		} else if b.dragPiece != nil && !b.mouseDown && (cursor == i || cursor == 0xff) {
 			if p == nil {
 				p = b.dragPiece
-				b.board[i].piece = b.dragPiece
-				b.board[b.dragIndex].piece = nil
+				b.squares[i].piece = b.dragPiece
+				b.squares[b.dragIndex].piece = nil
 				p.Position(rank, file)
 				b.fen = b.Fen()
 			}
 			b.dragPiece.StopDrag()
 			b.dragPiece = nil
-			b.dragIndex = 0xff
+			b.dragIndex = -1
 		}
-		b.board[i].Draw(b, target, highlighted)
+		b.squares[i].Draw(b, target, highlighted)
 		if p != nil && i != b.dragIndex {
 			p.Draw(target)
 		}
@@ -109,10 +109,10 @@ func (b *Board) Draw(target *ebiten.Image) {
 		b.dragPiece.Draw(target)
 	}
 	if b.EnableDebug() {
-		if cursor != 0xff {
+		if cursor != -1 {
 			ebitenutil.DebugPrintAt(target, "Rank: "+b.TranslateRFtoN(rank, file), b.DebugX(0), b.DebugY())
 			ebitenutil.DebugPrintAt(target, "Index: "+strconv.Itoa(int(cursor)), b.DebugX(1), b.DebugY())
-			p := b.board[cursor].piece
+			p := b.squares[cursor].piece
 			if p != nil {
 				ebitenutil.DebugPrintAt(target, p.Color(), b.DebugX(2), b.DebugY())
 				ebitenutil.DebugPrintAt(target, p.Name(), b.DebugX(3), b.DebugY())
@@ -143,16 +143,24 @@ func (s *square) Draw(b *Board, target *ebiten.Image, highlight bool) {
 }
 
 func (b *Board) resetBoard() {
+	b.players[0] = player.NewPlayer(Configuration(b), White)
+	b.players[1] = player.NewPlayer(Configuration(b), Black)
+	b.turn = White
+	b.fullMove = 0
+	b.halfMove = 0
+	b.enpassant = 0xff
+	b.dragIndex = 0xff
+	b.dragPiece = nil
 	for i := 0; i < 64; i++ {
-		b.board[i] = square{
+		b.squares[i] = square{
 			background: b.ColorBlack(),
 			size:       float32(b.SquareSize()),
 		}
 		if i%2 == (i/8)%2 {
-			b.board[i].background = b.ColorWhite()
+			b.squares[i].background = b.ColorWhite()
 		}
-		x, y := b.TranslateIndexToXY(uint8(i))
-		b.board[i].x = float32(x)
-		b.board[i].y = float32(y)
+		x, y := b.TranslateIndexToXY(i)
+		b.squares[i].x = float32(x)
+		b.squares[i].y = float32(y)
 	}
 }

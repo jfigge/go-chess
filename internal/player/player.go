@@ -31,7 +31,7 @@ func (p *Player) Draw(target *ebiten.Image) {
 	}
 }
 
-func (p *Player) AddPiece(pieceType uint8, rank, file uint8) *piece.Piece {
+func (p *Player) AddPiece(pieceType uint8, rank, file int) *piece.Piece {
 	newPiece := piece.NewPiece(Configuration(p), pieceType|p.color)
 	newPiece.Position(rank, file)
 	p.pieces = append(p.pieces, newPiece)
