@@ -64,12 +64,6 @@ const (
 	Rook   uint8 = 0b0000110
 	Queen  uint8 = 0b0001000
 	King   uint8 = 0b0001010
-
-	CastleWQ uint8 = 0b00000010
-	CastleWK uint8 = 0b00000100
-	CastleBQ uint8 = 0b00001000
-	CastleBK uint8 = 0b00010000
-	EnPas
 )
 
 var FenPieceMap = map[byte]uint8{

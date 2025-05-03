@@ -95,10 +95,27 @@ func (b *Board) WriteFullMove(sb *strings.Builder) {
 }
 
 func (b *Board) SetFen(fen string) {
-	b.resetBoard()
-	b.fen = fen
+	fen = strings.TrimSpace(fen)
+	if fen == "" {
+		fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+	}
+	b.players[0] = player.NewPlayer(Configuration(b), White)
+	b.players[1] = player.NewPlayer(Configuration(b), Black)
+	b.turn = White
+	b.fullMove = 0
+	b.halfMove = 0
+	b.enpassant = 0xff
+	for i := 0; i < 64; i++ {
+		b.squares[i] = &square{
+			size:  float32(b.SquareSize()),
+			index: i,
+		}
+		x, y := b.TranslateIndexToXY(i)
+		b.squares[i].x = float32(x)
+		b.squares[i].y = float32(y)
+	}
 	index := 0
-	parts := strings.Split(strings.TrimSpace(fen), " ")
+	parts := strings.Split(fen, " ")
 	if len(parts) > 0 && len(parts[0]) > 0 {
 		for i := 0; i < len(parts[0]); i++ {
 			c := parts[0][i]
@@ -192,22 +209,4 @@ func (b *Board) setFullMove(fullMove string) {
 		fmt.Printf("Invalid fullmove fen: %s\n", fullMove)
 	}
 	b.fullMove = fullMoveCount
-}
-
-func (b *Board) resetBoard() {
-	b.players[0] = player.NewPlayer(Configuration(b), White)
-	b.players[1] = player.NewPlayer(Configuration(b), Black)
-	b.turn = White
-	b.fullMove = 0
-	b.halfMove = 0
-	b.enpassant = 0xff
-	for i := 0; i < 64; i++ {
-		b.squares[i] = &square{
-			size:  float32(b.SquareSize()),
-			index: i,
-		}
-		x, y := b.TranslateIndexToXY(i)
-		b.squares[i].x = float32(x)
-		b.squares[i].y = float32(y)
-	}
 }

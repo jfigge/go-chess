@@ -96,6 +96,8 @@ func (g *Game) Update() error {
 		g.showFPS = !g.showFPS
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyL) {
 		g.showLabels = !g.showLabels
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyR) {
+		g.board.Setup("")
 	}
 	if g.targetHeight > g.boardHeight {
 		g.boardHeight++
