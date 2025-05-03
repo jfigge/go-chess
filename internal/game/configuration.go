@@ -33,6 +33,10 @@ func (g *Game) ShowStrength() bool {
 	return g.showStrength
 }
 
+func (g *Game) ShowLabels() bool {
+	return g.showLabels
+}
+
 func (g *Game) FontHeight() int {
 	return g.fontHeight
 }

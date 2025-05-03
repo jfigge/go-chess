@@ -32,7 +32,11 @@ type Configuration interface {
 	Turn(uint8) string
 	HighlightAttacks() bool
 	ShowStrength() bool
+	ShowLabels() bool
 	FontHeight() int
+
+	TextAt(dst *ebiten.Image, str string, x, y int, size float64, color color.Color)
+	TextSize(str string, size float64) (float64, float64)
 }
 
 type Token interface {

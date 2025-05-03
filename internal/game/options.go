@@ -42,5 +42,10 @@ func OptShowFPS(showFPS bool) Options {
 	return func(g *Game) {
 		g.showFPS = showFPS
 	}
+}
 
+func OptShowLabels(showLabels bool) Options {
+	return func(g *Game) {
+		g.showLabels = showLabels
+	}
 }

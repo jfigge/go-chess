@@ -18,6 +18,7 @@ type Game struct {
 	highlightAttacks bool
 	showStrength     bool
 	showFPS          bool
+	showLabels       bool
 	fontHeight       int
 	boardWidth       int
 	boardHeight      int
@@ -93,6 +94,8 @@ func (g *Game) Update() error {
 		g.highlightAttacks = !g.highlightAttacks
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyF) {
 		g.showFPS = !g.showFPS
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyL) {
+		g.showLabels = !g.showLabels
 	}
 	if g.targetHeight > g.boardHeight {
 		g.boardHeight++

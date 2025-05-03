@@ -19,6 +19,8 @@ func main() {
 		game.OptBlackRGB(0xa9, 0x7a, 0x65),
 		game.OptFontHeight(FontHeight),
 		game.OptEnableDebug(true),
+		game.OptShowLabels(true),
+		game.OptShowFPS(true),
 	)
 	ebiten.SetWindowTitle("Lutefisk Chess Engine 1.0")
 
