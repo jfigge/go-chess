@@ -2,6 +2,7 @@ package board
 
 import (
 	"fmt"
+	"github.com/hajimehoshi/ebiten/v2"
 	"strings"
 	"us.figge.chess/internal/piece"
 	"us.figge.chess/internal/player"
@@ -133,6 +134,10 @@ func (b *Board) SetFen(fen string) {
 	if len(parts) > 5 && len(parts[5]) > 0 {
 		b.setFullMove(parts[5])
 	}
+
+	b.foreground = ebiten.NewImage(b.SquareSize()*8, b.SquareSize()*8)
+	b.players[0].Draw(b.foreground)
+	b.players[1].Draw(b.foreground)
 }
 func (b *Board) setTurn(turn string) {
 	b.turn = White
@@ -192,4 +197,22 @@ func (b *Board) setFullMove(fullMove string) {
 		fmt.Printf("Invalid fullmove fen: %s\n", fullMove)
 	}
 	b.fullMove = fullMoveCount
+}
+
+func (b *Board) resetBoard() {
+	b.players[0] = player.NewPlayer(Configuration(b), White)
+	b.players[1] = player.NewPlayer(Configuration(b), Black)
+	b.turn = White
+	b.fullMove = 0
+	b.halfMove = 0
+	b.enpassant = 0xff
+	for i := 0; i < 64; i++ {
+		b.squares[i] = &square{
+			size:  float32(b.SquareSize()),
+			index: i,
+		}
+		x, y := b.TranslateIndexToXY(i)
+		b.squares[i].x = float32(x)
+		b.squares[i].y = float32(y)
+	}
 }

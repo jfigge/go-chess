@@ -1,54 +1,40 @@
 package board
 
 import (
+	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"image/color"
 	"strconv"
-	"us.figge.chess/internal/piece"
 	"us.figge.chess/internal/player"
 	. "us.figge.chess/internal/shared"
 )
 
-type square struct {
-	piece      *piece.Piece
-	background color.Color
-	highlight  bool
-	valid      bool
-	invalid    bool
-	x          float32
-	y          float32
-	size       float32
-}
-
 type Board struct {
 	Configuration
-	players        [2]*player.Player
-	squares        [64]square
-	turn           uint8
-	enpassant      int
-	fullMove       int
-	halfMove       int
-	fen            string
-	mouseDown      bool
-	mouseFirstDown bool
-	dragPiece      *piece.Piece
-	dragIndex      int
+	players    [2]*player.Player
+	squares    [64]*square
+	background *ebiten.Image
+	foreground *ebiten.Image
+
+	highlightSquare *square
+
+	turn      uint8
+	enpassant int
+	fullMove  int
+	halfMove  int
+	fen       string
+
+	//dragPiece      *piece.Piece
+	//dragIndex      int
 }
 
 func NewBoard(c Configuration, options ...BoardOptions) *Board {
 	board := &Board{
 		Configuration: c,
-		players: [2]*player.Player{
-			player.NewPlayer(c, White),
-			player.NewPlayer(c, Black),
-		},
-		enpassant: 0xff,
-		turn:      White,
-		halfMove:  0,
-		fen:       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+		background:    renderBoardBackground(c),
+		fen:           "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 	}
 	for _, option := range options {
 		option(board)
@@ -58,109 +44,51 @@ func NewBoard(c Configuration, options ...BoardOptions) *Board {
 }
 
 func (b *Board) Update() {
-	b.mouseFirstDown = inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
-	b.mouseDown = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
-	//b.mouseFirstDown = false
-	//down := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
-	//if down && !b.mouseDown {
-	//	fmt.Println("Left mouse button pressed")
-	//	b.mouseFirstDown = true
-	//	b.mouseDown = true
-	//} else if !down && b.mouseDown {
-	//	fmt.Println("Left mouse button released")
-	//	b.mouseDown = false
-	//}
+	x, y := ebiten.CursorPosition()
+	if rank, file, ok := b.TranslateXYtoRF(x, y); ok {
+		b.highlightSquare = b.squares[b.TranslateRFtoIndex(rank, file)]
+	} else {
+		b.highlightSquare = nil
+	}
 }
 
 func (b *Board) Draw(target *ebiten.Image) {
-	var ok bool
-	var rank int
-	var file int
-	cursor := -1
-	x, y := ebiten.CursorPosition()
-	if rank, file, ok = b.TranslateXYtoRF(x, y); ok {
-		cursor = b.TranslateRFtoIndex(rank, file)
+	target.DrawImage(b.background, nil)
+	if b.highlightSquare != nil {
+		b.highlightSquare.Draw(b, target)
 	}
-	for i := 0; i < 64; i++ {
-		highlighted := cursor == i
-		p := b.squares[i].piece
-		if highlighted && b.mouseFirstDown && p != nil && b.dragPiece == nil {
-			b.dragPiece = p
-			b.dragIndex = i
-			p.StartDrag()
-		} else if b.dragPiece != nil && !b.mouseDown && (cursor == i || cursor == 0xff) {
-			if p == nil {
-				p = b.dragPiece
-				b.squares[i].piece = b.dragPiece
-				b.squares[b.dragIndex].piece = nil
-				p.Position(rank, file)
-				b.fen = b.Fen()
-			}
-			b.dragPiece.StopDrag()
-			b.dragPiece = nil
-			b.dragIndex = -1
-		}
-		b.squares[i].Draw(b, target, highlighted)
-		if p != nil && i != b.dragIndex {
-			p.Draw(target)
-		}
-	}
-	if b.dragPiece != nil {
-		b.dragPiece.Draw(target)
-	}
+	target.DrawImage(b.foreground, nil)
+
 	if b.EnableDebug() {
-		if cursor != -1 {
-			ebitenutil.DebugPrintAt(target, "Rank: "+b.TranslateRFtoN(rank, file), b.DebugX(0), b.DebugY())
-			ebitenutil.DebugPrintAt(target, "Index: "+strconv.Itoa(int(cursor)), b.DebugX(1), b.DebugY())
-			p := b.squares[cursor].piece
+		x, y := ebiten.CursorPosition()
+		ebitenutil.DebugPrintAt(target, fmt.Sprintf("X,Y: %d,%d", x, y), b.DebugX(2), b.DebugY())
+		if r, f, ok := b.TranslateXYtoRF(x, y); ok {
+			ebitenutil.DebugPrintAt(target, fmt.Sprintf("R,F: %d,%d", r, f), b.DebugX(1), b.DebugY())
+		}
+		if b.highlightSquare != nil {
+			index := b.highlightSquare.index
+			ebitenutil.DebugPrintAt(target, "Index: "+strconv.Itoa(index), b.DebugX(0), b.DebugY())
+			p := b.highlightSquare.piece
 			if p != nil {
-				ebitenutil.DebugPrintAt(target, p.Color(), b.DebugX(2), b.DebugY())
-				ebitenutil.DebugPrintAt(target, p.Name(), b.DebugX(3), b.DebugY())
+				ebitenutil.DebugPrintAt(target, p.Token.Color()+" "+p.Name(), b.DebugX(4), b.DebugY())
 			}
 		}
-		turn := "White"
-		if b.turn == Black {
-			turn = "Black"
-		}
-		ebitenutil.DebugPrintAt(target, "Turn: "+turn, b.DebugX(4), b.DebugY())
-		ebitenutil.DebugPrintAt(target, "Fen: "+b.fen, b.DebugX(0), b.DebugFen())
+		ebitenutil.DebugPrintAt(target, "Move: "+b.Color(b.turn), b.DebugX(6), b.DebugY())
+		ebitenutil.DebugPrintAt(target, "Fen:"+b.fen, b.DebugX(0), b.DebugFen())
 	}
 }
 
-func (s *square) Draw(b *Board, target *ebiten.Image, highlight bool) {
-	c := s.background
-	if highlight {
-		c = b.ColorHighlight()
-		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-			c = b.ColorInvalid()
+func renderBoardBackground(c Configuration) *ebiten.Image {
+	s := c.SquareSize()
+	k := 0
+	clr := []color.Color{c.ColorWhite(), c.ColorBlack()}
+	img := ebiten.NewImage(s*8, s*8)
+	for i := 0; i < 8; i++ {
+		for j := 0; j < 8; j++ {
+			vector.DrawFilledRect(img, float32(i*s), float32(j*s), float32(s), float32(s), clr[k], false)
+			k = 1 - k
 		}
-	} else if s.valid {
-		c = b.ColorValid()
-	} else if s.invalid {
-		c = b.ColorInvalid()
+		k = 1 - k
 	}
-	vector.DrawFilledRect(target, s.x, s.y, s.size, s.size, c, false)
-}
-
-func (b *Board) resetBoard() {
-	b.players[0] = player.NewPlayer(Configuration(b), White)
-	b.players[1] = player.NewPlayer(Configuration(b), Black)
-	b.turn = White
-	b.fullMove = 0
-	b.halfMove = 0
-	b.enpassant = 0xff
-	b.dragIndex = 0xff
-	b.dragPiece = nil
-	for i := 0; i < 64; i++ {
-		b.squares[i] = square{
-			background: b.ColorBlack(),
-			size:       float32(b.SquareSize()),
-		}
-		if i%2 == (i/8)%2 {
-			b.squares[i].background = b.ColorWhite()
-		}
-		x, y := b.TranslateIndexToXY(i)
-		b.squares[i].x = float32(x)
-		b.squares[i].y = float32(y)
-	}
+	return img
 }

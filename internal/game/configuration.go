@@ -21,17 +21,26 @@ func (g *Game) SheetImageSize() int {
 	return g.sheetImageSize
 }
 
+func (g *Game) Color(colorType uint8) string {
+	return colors[colorType]
+}
+
 func (g *Game) TranslateRFtoXY(rank, file int) (float64, float64) {
 	return float64((rank - 1) * g.squareSize), float64((8 - file) * g.squareSize)
 }
 
+var lastRank int
+
 func (g *Game) TranslateXYtoRF(x, y int) (int, int, bool) {
-	rank := int(float32(x-1)/float32(g.squareSize)) + 1
-	file := 8 - int(float32(y-2)/float32(g.squareSize))
-	if rank < 1 || rank > 8 || file < 1 || file > 8 {
+	if x < 0 || y < 0 {
 		return 0, 0, false
 	}
-	return rank, file, true
+	rank := int(float32(x-1) / float32(g.squareSize))
+	file := 7 - int(float32(y-2)/float32(g.squareSize))
+	if rank < 0 || rank > 7 || file < 0 || file > 7 {
+		return 0, 0, false
+	}
+	return rank + 1, file + 1, true
 }
 
 func (g *Game) TranslateRFtoIndex(rank, file int) int {
