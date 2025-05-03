@@ -29,7 +29,7 @@ type Game struct {
 	fenY             int
 }
 
-func NewGame(options ...GameOptions) *Game {
+func NewGame(options ...Options) *Game {
 	game := &Game{
 		ColorScheme:      newColorScheme(),
 		squareSize:       64,

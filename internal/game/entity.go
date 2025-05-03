@@ -5,7 +5,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"image"
 	_ "image/png"
-	"us.figge.chess/internal/shared"
+	"us.figge.chess/internal/common"
 )
 
 type Entity struct {
@@ -16,18 +16,18 @@ type Entity struct {
 
 const (
 	fen              = "pnbrqk"
-	TokenWhitePawn   = 0b01010000 | shared.Pawn | shared.White
-	TokenWhiteKnight = 0b00110000 | shared.Knight | shared.White
-	TokenWhiteBishop = 0b00100000 | shared.Bishop | shared.White
-	TokenWhiteRook   = 0b01000000 | shared.Rook | shared.White
-	TokenWhiteQueen  = 0b00010000 | shared.Queen | shared.White
-	TokenWhiteKing   = 0b00000000 | shared.King | shared.White
-	TokenBlackPawn   = 0b01010000 | shared.Pawn | shared.Black
-	TokenBlackKnight = 0b00110000 | shared.Knight | shared.Black
-	TokenBlackBishop = 0b00100000 | shared.Bishop | shared.Black
-	TokenBlackRook   = 0b01000000 | shared.Rook | shared.Black
-	TokenBlackQueen  = 0b00010000 | shared.Queen | shared.Black
-	TokenBlackKing   = 0b00000000 | shared.King | shared.Black
+	TokenWhitePawn   = 0b01010000 | common.Pawn | common.White
+	TokenWhiteKnight = 0b00110000 | common.Knight | common.White
+	TokenWhiteBishop = 0b00100000 | common.Bishop | common.White
+	TokenWhiteRook   = 0b01000000 | common.Rook | common.White
+	TokenWhiteQueen  = 0b00010000 | common.Queen | common.White
+	TokenWhiteKing   = 0b00000000 | common.King | common.White
+	TokenBlackPawn   = 0b01010000 | common.Pawn | common.Black
+	TokenBlackKnight = 0b00110000 | common.Knight | common.Black
+	TokenBlackBishop = 0b00100000 | common.Bishop | common.Black
+	TokenBlackRook   = 0b01000000 | common.Rook | common.Black
+	TokenBlackQueen  = 0b00010000 | common.Queen | common.Black
+	TokenBlackKing   = 0b00000000 | common.King | common.Black
 )
 
 var (
@@ -42,7 +42,7 @@ func (e *Entity) Draw(dst *ebiten.Image, op *ebiten.DrawImageOptions) {
 	dst.DrawImage(e.img, op)
 }
 
-func makeEntities(c shared.Configuration) map[uint8]*Entity {
+func makeEntities(c common.Configuration) map[uint8]*Entity {
 	return map[uint8]*Entity{
 		TokenWhitePawn & 0b00001111:   makeEntity(c, TokenWhitePawn),
 		TokenWhiteKnight & 0b00001111: makeEntity(c, TokenWhiteKnight),
@@ -58,7 +58,7 @@ func makeEntities(c shared.Configuration) map[uint8]*Entity {
 		TokenBlackKing & 0b00001111:   makeEntity(c, TokenBlackKing),
 	}
 }
-func makeEntity(c shared.Configuration, tokenType uint8) *Entity {
+func makeEntity(c common.Configuration, tokenType uint8) *Entity {
 	entity := &Entity{
 		img:       ebiten.NewImage(c.SquareSize(), c.SquareSize()),
 		pieceType: tokenType & 0b00001110,
@@ -87,14 +87,14 @@ func mustLoadImage(name string) *ebiten.Image {
 	return ebiten.NewImageFromImage(img)
 }
 
-func (e *Entity) IsPawn() bool   { return e.pieceType == shared.Pawn }
-func (e *Entity) IsKnight() bool { return e.pieceType == shared.Knight }
-func (e *Entity) IsBishop() bool { return e.pieceType == shared.Bishop }
-func (e *Entity) IsRook() bool   { return e.pieceType == shared.Rook }
-func (e *Entity) IsQueen() bool  { return e.pieceType == shared.Queen }
-func (e *Entity) IsKing() bool   { return e.pieceType == shared.King }
-func (e *Entity) IsWhite() bool  { return e.colorType == shared.White }
-func (e *Entity) IsBlack() bool  { return e.colorType == shared.Black }
+func (e *Entity) IsPawn() bool   { return e.pieceType == common.Pawn }
+func (e *Entity) IsKnight() bool { return e.pieceType == common.Knight }
+func (e *Entity) IsBishop() bool { return e.pieceType == common.Bishop }
+func (e *Entity) IsRook() bool   { return e.pieceType == common.Rook }
+func (e *Entity) IsQueen() bool  { return e.pieceType == common.Queen }
+func (e *Entity) IsKing() bool   { return e.pieceType == common.King }
+func (e *Entity) IsWhite() bool  { return e.colorType == common.White }
+func (e *Entity) IsBlack() bool  { return e.colorType == common.Black }
 func (e *Entity) Name() string   { return names[e.pieceType>>1] }
 func (e *Entity) Color() string  { return colors[e.colorType] }
 func (e *Entity) Fen() byte      { return fen[e.pieceType>>1] }

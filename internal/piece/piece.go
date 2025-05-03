@@ -2,7 +2,7 @@ package piece
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	. "us.figge.chess/internal/shared"
+	. "us.figge.chess/internal/common"
 )
 
 type Piece struct {

@@ -2,7 +2,7 @@ package game
 
 import (
 	"strings"
-	"us.figge.chess/internal/shared"
+	"us.figge.chess/internal/common"
 )
 
 const (
@@ -13,7 +13,7 @@ func (g *Game) SquareSize() int {
 	return g.squareSize
 }
 
-func (g *Game) Token(pieceType uint8) shared.Token {
+func (g *Game) Token(pieceType uint8) common.Token {
 	return g.entities[pieceType]
 }
 
@@ -38,15 +38,15 @@ func (g *Game) FontHeight() int {
 }
 
 func (g *Game) TranslateRFtoXY(rank, file int) (float64, float64) {
-	return float64((rank - 1) * g.squareSize), float64((8 - file) * g.squareSize)
+	return float64((file - 1) * g.squareSize), float64((8 - rank) * g.squareSize)
 }
 
 func (g *Game) TranslateXYtoRF(x, y int) (int, int, bool) {
 	if x < 0 || y < 0 {
 		return 0, 0, false
 	}
-	rank := int(float32(x-1) / float32(g.squareSize))
-	file := 7 - int(float32(y-2)/float32(g.squareSize))
+	rank := 7 - int(float32(y-2)/float32(g.squareSize))
+	file := int(float32(x-1) / float32(g.squareSize))
 	if rank < 0 || rank > 7 || file < 0 || file > 7 {
 		return 0, 0, false
 	}
@@ -54,13 +54,13 @@ func (g *Game) TranslateXYtoRF(x, y int) (int, int, bool) {
 }
 
 func (g *Game) TranslateRFtoIndex(rank, file int) int {
-	index := (8-file)*8 + rank - 1
+	index := (8-rank)*8 + file - 1
 	return index
 }
 
 func (g *Game) TranslateIndexToRF(index int) (int, int) {
-	rank := index%8 + 1
-	file := 8 - index/8
+	rank := 8 - index/8
+	file := index%8 + 1
 	return rank, file
 }
 
@@ -103,8 +103,8 @@ func (g *Game) EnableDebug() bool {
 	return g.debugEnabled
 }
 
-func (g *Game) DebugX(rank int) int {
-	return g.debugX[rank]
+func (g *Game) DebugX(file int) int {
+	return g.debugX[file]
 }
 
 func (g *Game) DebugY() int {

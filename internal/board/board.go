@@ -8,15 +8,16 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"image/color"
 	"math"
-	"strconv"
+	"strings"
+	. "us.figge.chess/internal/common"
 	"us.figge.chess/internal/piece"
 	"us.figge.chess/internal/player"
-	. "us.figge.chess/internal/shared"
 )
 
 type Board struct {
 	Configuration
-	players         [2]*player.Player
+	players [2]*player.Player
+
 	squares         [64]*square
 	composite       *ebiten.Image
 	background      *ebiten.Image
@@ -26,6 +27,7 @@ type Board struct {
 	highlightSquare *square
 
 	turn      uint8
+	castling  uint8
 	enpassant int
 	fullMove  int
 	halfMove  int
@@ -35,7 +37,7 @@ type Board struct {
 	dragIndex int
 }
 
-func NewBoard(c Configuration, options ...BoardOptions) *Board {
+func NewBoard(c Configuration, options ...Options) *Board {
 	board := &Board{
 		Configuration: c,
 		fen:           "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -97,13 +99,12 @@ func (b *Board) Draw(target *ebiten.Image) {
 
 	if b.EnableDebug() {
 		x, y := ebiten.CursorPosition()
-		ebitenutil.DebugPrintAt(target, fmt.Sprintf("X,Y: %d,%d", x, y), b.DebugX(2), b.DebugY())
 		if r, f, ok := b.TranslateXYtoRF(x, y); ok {
-			ebitenutil.DebugPrintAt(target, fmt.Sprintf("R,F: %d,%d", r, f), b.DebugX(1), b.DebugY())
-		}
-		if b.highlightSquare != nil {
-			index := b.highlightSquare.index
-			ebitenutil.DebugPrintAt(target, "Index: "+strconv.Itoa(index), b.DebugX(0), b.DebugY())
+			index := b.TranslateRFtoIndex(r, f)
+			notation := b.TranslateRFtoN(r, f)
+			ebitenutil.DebugPrintAt(target, fmt.Sprintf("RF: %d,%d", r, f), b.DebugX(1), b.DebugY())
+			ebitenutil.DebugPrintAt(target, fmt.Sprintf("XY: %d,%d", x, y), b.DebugX(2), b.DebugY())
+			ebitenutil.DebugPrintAt(target, fmt.Sprintf("Idx: %d %s", index, strings.ToUpper(notation)), b.DebugX(0), b.DebugY())
 			p := b.highlightSquare.piece
 			if p != nil {
 				ebitenutil.DebugPrintAt(target, p.Token.Color()+" "+p.Name(), b.DebugX(4), b.DebugY())
@@ -111,6 +112,25 @@ func (b *Board) Draw(target *ebiten.Image) {
 		}
 		ebitenutil.DebugPrintAt(target, "Move: "+b.Turn(b.turn), b.DebugX(6), b.DebugY())
 		ebitenutil.DebugPrintAt(target, "Fen:"+b.fen, b.DebugX(0), b.DebugFen())
+	}
+}
+
+func (b *Board) initializeImages() {
+	s := b.SquareSize()
+	k := 0
+	clr := []color.Color{b.ColorWhite(), b.ColorBlack()}
+	b.composite = ebiten.NewImage(s*8, s*8)
+	b.background = ebiten.NewImage(s*8, s*8)
+	b.strength = ebiten.NewImage(b.FontHeight(), s*8)
+	b.strengthOp = &ebiten.DrawImageOptions{}
+	b.strengthOp.GeoM.Translate(float64(s*8), 0)
+
+	for i := 0; i < 8; i++ {
+		for j := 0; j < 8; j++ {
+			vector.DrawFilledRect(b.background, float32(i*s), float32(j*s), float32(s), float32(s), clr[k], false)
+			k = 1 - k
+		}
+		k = 1 - k
 	}
 }
 
@@ -132,22 +152,4 @@ func (b *Board) renderForeground() {
 	ebitenutil.DebugPrintAt(b.strength, fmt.Sprintf("%d", val), 0, int((s-float32(b.FontHeight()))/2))
 
 	b.fen = b.Fen()
-}
-func (b *Board) initializeImages() {
-	s := b.SquareSize()
-	k := 0
-	clr := []color.Color{b.ColorWhite(), b.ColorBlack()}
-	b.composite = ebiten.NewImage(s*8, s*8)
-	b.background = ebiten.NewImage(s*8, s*8)
-	b.strength = ebiten.NewImage(b.FontHeight(), s*8)
-	b.strengthOp = &ebiten.DrawImageOptions{}
-	b.strengthOp.GeoM.Translate(float64(s*8), 0)
-
-	for i := 0; i < 8; i++ {
-		for j := 0; j < 8; j++ {
-			vector.DrawFilledRect(b.background, float32(i*s), float32(j*s), float32(s), float32(s), clr[k], false)
-			k = 1 - k
-		}
-		k = 1 - k
-	}
 }

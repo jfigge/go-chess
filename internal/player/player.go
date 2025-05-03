@@ -2,8 +2,8 @@ package player
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	. "us.figge.chess/internal/common"
 	"us.figge.chess/internal/piece"
-	. "us.figge.chess/internal/shared"
 )
 
 type Player struct {

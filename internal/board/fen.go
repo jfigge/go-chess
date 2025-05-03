@@ -3,9 +3,9 @@ package board
 import (
 	"fmt"
 	"strings"
+	. "us.figge.chess/internal/common"
 	"us.figge.chess/internal/piece"
 	"us.figge.chess/internal/player"
-	. "us.figge.chess/internal/shared"
 )
 
 func (b *Board) Fen() string {

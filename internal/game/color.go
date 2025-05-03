@@ -2,33 +2,33 @@ package game
 
 import "image/color"
 
-func OptWhiteRGB(red, green, blue uint8) GameOptions {
+func OptWhiteRGB(red, green, blue uint8) Options {
 	return func(g *Game) {
 		g.ColorScheme.white = &color.RGBA{R: red, G: green, B: blue, A: 0xff}
 	}
 }
-func OptBlackRGB(red, green, blue uint8) GameOptions {
+func OptBlackRGB(red, green, blue uint8) Options {
 	return func(g *Game) {
 		g.ColorScheme.black = &color.RGBA{R: red, G: green, B: blue, A: 0xff}
 	}
 }
-func OptValidRGBA(red, green, blue, alpha uint8) GameOptions {
+func OptValidRGBA(red, green, blue, alpha uint8) Options {
 	return func(g *Game) {
 		g.ColorScheme.valid = &color.RGBA{R: red, G: green, B: blue, A: alpha}
 	}
 }
-func OptInvalidRGBA(red, green, blue, alpha uint8) GameOptions {
+func OptInvalidRGBA(red, green, blue, alpha uint8) Options {
 	return func(g *Game) {
 		g.ColorScheme.invalid = &color.RGBA{R: red, G: green, B: blue, A: alpha}
 	}
 }
-func OptHighlightRGBA(red, green, blue, alpha uint8) GameOptions {
+func OptHighlightRGBA(red, green, blue, alpha uint8) Options {
 	return func(g *Game) {
 		g.ColorScheme.highlight = &color.RGBA{R: red, G: green, B: blue, A: alpha}
 	}
 }
 
-func OptStrengthRGBA(red, green, blue uint8) GameOptions {
+func OptStrengthRGBA(red, green, blue uint8) Options {
 	return func(g *Game) {
 		g.ColorScheme.strength = &color.RGBA{R: red, G: green, B: blue, A: 0xff}
 	}

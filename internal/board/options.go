@@ -1,8 +1,8 @@
 package board
 
-type BoardOptions func(b *Board)
+type Options func(b *Board)
 
-func OptSetup(fen string) BoardOptions {
+func OptSetup(fen string) Options {
 	return func(b *Board) {
 		b.fen = fen
 	}
