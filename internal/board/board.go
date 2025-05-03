@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"image/color"
+	"math"
 	"strconv"
 	"us.figge.chess/internal/piece"
 	"us.figge.chess/internal/player"
@@ -17,8 +18,11 @@ type Board struct {
 	Configuration
 	players         [2]*player.Player
 	squares         [64]*square
+	composite       *ebiten.Image
 	background      *ebiten.Image
 	foreground      *ebiten.Image
+	strength        *ebiten.Image
+	strengthOp      *ebiten.DrawImageOptions
 	highlightSquare *square
 
 	turn      uint8
@@ -34,12 +38,12 @@ type Board struct {
 func NewBoard(c Configuration, options ...BoardOptions) *Board {
 	board := &Board{
 		Configuration: c,
-		background:    renderBoardBackground(c),
 		fen:           "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 	}
 	for _, option := range options {
 		option(board)
 	}
+	board.initializeImages()
 	board.SetFen(board.fen)
 	return board
 }
@@ -72,17 +76,23 @@ func (b *Board) Update() {
 		b.dragIndex = -1
 		b.renderForeground()
 	}
+	if b.HighlightAttacks() {
 
+	}
 }
 
 func (b *Board) Draw(target *ebiten.Image) {
-	target.DrawImage(b.background, nil)
+	b.composite.DrawImage(b.background, nil)
 	if b.highlightSquare != nil {
-		b.highlightSquare.Draw(b, target)
+		b.highlightSquare.Draw(b, b.composite)
 	}
-	target.DrawImage(b.foreground, nil)
+	b.composite.DrawImage(b.foreground, nil)
 	if b.dragPiece != nil && b.highlightSquare != nil {
-		b.dragPiece.Draw(target, false)
+		b.dragPiece.Draw(b.composite, false)
+	}
+	target.DrawImage(b.composite, nil)
+	if b.ShowStrength() {
+		target.DrawImage(b.strength, b.strengthOp)
 	}
 
 	if b.EnableDebug() {
@@ -99,7 +109,7 @@ func (b *Board) Draw(target *ebiten.Image) {
 				ebitenutil.DebugPrintAt(target, p.Token.Color()+" "+p.Name(), b.DebugX(4), b.DebugY())
 			}
 		}
-		ebitenutil.DebugPrintAt(target, "Move: "+b.Color(b.turn), b.DebugX(6), b.DebugY())
+		ebitenutil.DebugPrintAt(target, "Move: "+b.Turn(b.turn), b.DebugX(6), b.DebugY())
 		ebitenutil.DebugPrintAt(target, "Fen:"+b.fen, b.DebugX(0), b.DebugFen())
 	}
 }
@@ -108,19 +118,36 @@ func (b *Board) renderForeground() {
 	b.foreground = ebiten.NewImage(b.SquareSize()*8, b.SquareSize()*8)
 	b.players[0].Draw(b.foreground)
 	b.players[1].Draw(b.foreground)
+
+	s := float32(b.SquareSize() * 8)
+	_, y := ebiten.CursorPosition()
+	pct := float32(y) / s
+	h1 := s * pct
+	val := int(math.Abs(float64(pct-.5) * 200))
+	if val > 100 {
+		val = 100
+	}
+	b.strength.Clear()
+	vector.DrawFilledRect(b.strength, 0, h1, float32(b.FontHeight()), s-h1, b.ColorStrength(), false)
+	ebitenutil.DebugPrintAt(b.strength, fmt.Sprintf("%d", val), 0, int((s-float32(b.FontHeight()))/2))
+
 	b.fen = b.Fen()
 }
-func renderBoardBackground(c Configuration) *ebiten.Image {
-	s := c.SquareSize()
+func (b *Board) initializeImages() {
+	s := b.SquareSize()
 	k := 0
-	clr := []color.Color{c.ColorWhite(), c.ColorBlack()}
-	img := ebiten.NewImage(s*8, s*8)
+	clr := []color.Color{b.ColorWhite(), b.ColorBlack()}
+	b.composite = ebiten.NewImage(s*8, s*8)
+	b.background = ebiten.NewImage(s*8, s*8)
+	b.strength = ebiten.NewImage(b.FontHeight(), s*8)
+	b.strengthOp = &ebiten.DrawImageOptions{}
+	b.strengthOp.GeoM.Translate(float64(s*8), 0)
+
 	for i := 0; i < 8; i++ {
 		for j := 0; j < 8; j++ {
-			vector.DrawFilledRect(img, float32(i*s), float32(j*s), float32(s), float32(s), clr[k], false)
+			vector.DrawFilledRect(b.background, float32(i*s), float32(j*s), float32(s), float32(s), clr[k], false)
 			k = 1 - k
 		}
 		k = 1 - k
 	}
-	return img
 }

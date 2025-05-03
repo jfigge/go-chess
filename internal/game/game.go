@@ -15,25 +15,33 @@ type Game struct {
 	squareSize     int
 	sheetImageSize int
 
-	fontHeight   int
-	boardWidth   int
-	boardHeight  int
-	targetHeight int
-	debugEnabled bool
-	debugY       int
-	debugX       [8]int
-	fenY         int
+	highlightAttacks bool
+	showStrength     bool
+	showFPS          bool
+	fontHeight       int
+	boardWidth       int
+	boardHeight      int
+	targetWidth      int
+	targetHeight     int
+	debugEnabled     bool
+	debugY           int
+	debugX           [8]int
+	fenY             int
 }
 
 func NewGame(options ...GameOptions) *Game {
 	game := &Game{
-		ColorScheme:  newColorScheme(),
-		squareSize:   64,
-		boardWidth:   512,
-		boardHeight:  512,
-		targetHeight: 512,
-		debugEnabled: false,
-		fontHeight:   16,
+		ColorScheme:      newColorScheme(),
+		squareSize:       64,
+		boardWidth:       512,
+		boardHeight:      512,
+		targetWidth:      512,
+		targetHeight:     512,
+		debugEnabled:     false,
+		highlightAttacks: false,
+		showStrength:     false,
+		showFPS:          false,
+		fontHeight:       16,
 	}
 	for _, option := range options {
 		option(game)
@@ -54,6 +62,10 @@ func NewGame(options ...GameOptions) *Game {
 	if game.debugEnabled {
 		game.boardHeight += game.fontHeight*2 + 2
 	}
+	if game.showStrength {
+		game.boardWidth += game.fontHeight
+	}
+	game.targetWidth = game.boardWidth
 	game.targetHeight = game.boardHeight
 	ebiten.SetWindowSize(game.boardWidth, game.boardHeight)
 
@@ -71,6 +83,18 @@ func (g *Game) Update() error {
 			g.targetHeight = g.squareSize * 8
 		}
 		ebiten.SetWindowSize(g.boardWidth, g.boardHeight)
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyS) {
+		g.showStrength = !g.showStrength
+		if g.showStrength {
+			g.targetWidth = g.squareSize*8 + g.fontHeight
+		} else {
+			g.targetWidth = g.squareSize * 8
+		}
+		ebiten.SetWindowSize(g.boardWidth, g.boardHeight)
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyA) {
+		g.highlightAttacks = !g.highlightAttacks
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyF) {
+		g.showFPS = !g.showFPS
 	}
 	if g.targetHeight > g.boardHeight {
 		g.boardHeight++
@@ -79,14 +103,21 @@ func (g *Game) Update() error {
 		g.boardHeight--
 		ebiten.SetWindowSize(g.boardWidth, g.boardHeight)
 	}
+	if g.targetWidth > g.boardWidth {
+		g.boardWidth++
+		ebiten.SetWindowSize(g.boardWidth, g.boardHeight)
+	} else if g.targetWidth < g.boardWidth {
+		g.boardWidth--
+		ebiten.SetWindowSize(g.boardWidth, g.boardHeight)
+	}
 	g.board.Update()
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	g.board.Draw(screen)
-	if g.EnableDebug() {
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("FPS: %0.2f", ebiten.ActualFPS()), g.debugX[7], g.debugY)
+	if g.EnableDebug() && g.showFPS {
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("FPS: %0.2f", ebiten.ActualFPS()), g.DebugX(7), g.debugY)
 	}
 }
 

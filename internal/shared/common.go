@@ -28,8 +28,12 @@ type Configuration interface {
 	ColorValid() color.Color
 	ColorInvalid() color.Color
 	ColorHighlight() color.Color
+	ColorStrength() color.Color
 
-	Color(uint8) string
+	Turn(uint8) string
+	HighlightAttacks() bool
+	ShowStrength() bool
+	FontHeight() int
 }
 
 type Token interface {

@@ -21,15 +21,25 @@ func (g *Game) SheetImageSize() int {
 	return g.sheetImageSize
 }
 
-func (g *Game) Color(colorType uint8) string {
+func (g *Game) Turn(colorType uint8) string {
 	return colors[colorType]
+}
+
+func (g *Game) HighlightAttacks() bool {
+	return g.highlightAttacks
+}
+
+func (g *Game) ShowStrength() bool {
+	return g.showStrength
+}
+
+func (g *Game) FontHeight() int {
+	return g.fontHeight
 }
 
 func (g *Game) TranslateRFtoXY(rank, file int) (float64, float64) {
 	return float64((rank - 1) * g.squareSize), float64((8 - file) * g.squareSize)
 }
-
-var lastRank int
 
 func (g *Game) TranslateXYtoRF(x, y int) (int, int, bool) {
 	if x < 0 || y < 0 {

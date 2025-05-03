@@ -25,3 +25,22 @@ func OptEnableDebug(enabled bool) GameOptions {
 		g.debugEnabled = enabled
 	}
 }
+
+func OptHighlightAttacks(highlightAttacks bool) GameOptions {
+	return func(g *Game) {
+		g.highlightAttacks = highlightAttacks
+	}
+}
+
+func OptShowStrength(enabled bool) GameOptions {
+	return func(g *Game) {
+		g.showStrength = enabled
+	}
+}
+
+func OptShowFPS(showFPS bool) GameOptions {
+	return func(g *Game) {
+		g.showFPS = showFPS
+	}
+
+}
