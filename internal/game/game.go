@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"us.figge.chess/internal/board"
 )
 
@@ -17,6 +18,7 @@ type Game struct {
 	fontHeight   int
 	boardWidth   int
 	boardHeight  int
+	targetHeight int
 	debugEnabled bool
 	debugY       int
 	debugX       [8]int
@@ -29,6 +31,7 @@ func NewGame(options ...GameOptions) *Game {
 		squareSize:   64,
 		boardWidth:   512,
 		boardHeight:  512,
+		targetHeight: 512,
 		debugEnabled: false,
 		fontHeight:   16,
 	}
@@ -51,6 +54,7 @@ func NewGame(options ...GameOptions) *Game {
 	if game.debugEnabled {
 		game.boardHeight += game.fontHeight*2 + 2
 	}
+	game.targetHeight = game.boardHeight
 	ebiten.SetWindowSize(game.boardWidth, game.boardHeight)
 
 	return game
@@ -59,6 +63,21 @@ func NewGame(options ...GameOptions) *Game {
 func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyQ) {
 		return ebiten.Termination
+	} else if inpututil.IsKeyJustPressed(ebiten.KeyD) {
+		g.debugEnabled = !g.debugEnabled
+		if g.debugEnabled {
+			g.targetHeight = g.squareSize*8 + g.fontHeight*2 + 2
+		} else {
+			g.targetHeight = g.squareSize * 8
+		}
+		ebiten.SetWindowSize(g.boardWidth, g.boardHeight)
+	}
+	if g.targetHeight > g.boardHeight {
+		g.boardHeight++
+		ebiten.SetWindowSize(g.boardWidth, g.boardHeight)
+	} else if g.targetHeight < g.boardHeight {
+		g.boardHeight--
+		ebiten.SetWindowSize(g.boardWidth, g.boardHeight)
 	}
 	g.board.Update()
 	return nil

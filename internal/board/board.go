@@ -13,11 +13,10 @@ import (
 
 type Board struct {
 	Configuration
-	players    [2]*player.Player
-	squares    [64]*square
-	background *ebiten.Image
-	foreground *ebiten.Image
-
+	players         [2]*player.Player
+	squares         [64]*square
+	background      *ebiten.Image
+	foreground      *ebiten.Image
 	highlightSquare *square
 
 	turn      uint8
