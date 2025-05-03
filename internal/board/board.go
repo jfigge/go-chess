@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"image/color"
 	"strconv"
+	"us.figge.chess/internal/piece"
 	"us.figge.chess/internal/player"
 	. "us.figge.chess/internal/shared"
 )
@@ -25,8 +27,8 @@ type Board struct {
 	halfMove  int
 	fen       string
 
-	//dragPiece      *piece.Piece
-	//dragIndex      int
+	dragPiece *piece.Piece
+	dragIndex int
 }
 
 func NewBoard(c Configuration, options ...BoardOptions) *Board {
@@ -44,11 +46,33 @@ func NewBoard(c Configuration, options ...BoardOptions) *Board {
 
 func (b *Board) Update() {
 	x, y := ebiten.CursorPosition()
-	if rank, file, ok := b.TranslateXYtoRF(x, y); ok {
+	rank, file, ok := b.TranslateXYtoRF(x, y)
+	if ok {
 		b.highlightSquare = b.squares[b.TranslateRFtoIndex(rank, file)]
 	} else {
 		b.highlightSquare = nil
 	}
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) && b.highlightSquare != nil && b.highlightSquare.piece != nil {
+		b.dragIndex = b.highlightSquare.index
+		b.dragPiece = b.highlightSquare.piece
+		b.highlightSquare.piece = nil
+		b.dragPiece.StartDrag(x, y)
+		b.renderForeground()
+		ebiten.SetCursorMode(ebiten.CursorModeHidden)
+	} else if !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && b.dragPiece != nil {
+		ebiten.SetCursorMode(ebiten.CursorModeVisible)
+		if ok && b.highlightSquare.piece == nil {
+			b.dragPiece.StopDrag(rank, file)
+			b.highlightSquare.piece = b.dragPiece
+		} else {
+			b.dragPiece.CancelDrag()
+			b.squares[b.dragIndex].piece = b.dragPiece
+		}
+		b.dragPiece = nil
+		b.dragIndex = -1
+		b.renderForeground()
+	}
+
 }
 
 func (b *Board) Draw(target *ebiten.Image) {
@@ -57,6 +81,9 @@ func (b *Board) Draw(target *ebiten.Image) {
 		b.highlightSquare.Draw(b, target)
 	}
 	target.DrawImage(b.foreground, nil)
+	if b.dragPiece != nil && b.highlightSquare != nil {
+		b.dragPiece.Draw(target, false)
+	}
 
 	if b.EnableDebug() {
 		x, y := ebiten.CursorPosition()
@@ -77,6 +104,12 @@ func (b *Board) Draw(target *ebiten.Image) {
 	}
 }
 
+func (b *Board) renderForeground() {
+	b.foreground = ebiten.NewImage(b.SquareSize()*8, b.SquareSize()*8)
+	b.players[0].Draw(b.foreground)
+	b.players[1].Draw(b.foreground)
+	b.fen = b.Fen()
+}
 func renderBoardBackground(c Configuration) *ebiten.Image {
 	s := c.SquareSize()
 	k := 0

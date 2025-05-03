@@ -2,7 +2,6 @@ package board
 
 import (
 	"fmt"
-	"github.com/hajimehoshi/ebiten/v2"
 	"strings"
 	"us.figge.chess/internal/piece"
 	"us.figge.chess/internal/player"
@@ -11,7 +10,6 @@ import (
 
 func (b *Board) Fen() string {
 	sb := strings.Builder{}
-
 	index := 0
 	count := 0
 	for i := 0; i < 8; i++ {
@@ -134,10 +132,7 @@ func (b *Board) SetFen(fen string) {
 	if len(parts) > 5 && len(parts[5]) > 0 {
 		b.setFullMove(parts[5])
 	}
-
-	b.foreground = ebiten.NewImage(b.SquareSize()*8, b.SquareSize()*8)
-	b.players[0].Draw(b.foreground)
-	b.players[1].Draw(b.foreground)
+	b.renderForeground()
 }
 func (b *Board) setTurn(turn string) {
 	b.turn = White

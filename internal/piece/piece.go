@@ -27,13 +27,15 @@ func NewPiece(c Configuration, pieceType uint8) *Piece {
 	return piece
 }
 
-func (p *Piece) Draw(target *ebiten.Image) {
-	if p.dragging {
+func (p *Piece) Draw(target *ebiten.Image, drawFixed bool) {
+	if drawFixed && !p.dragging {
+		p.Token.Draw(target, p.op)
+	} else if !drawFixed && p.dragging {
 		p.op.GeoM.Reset()
 		x, y := ebiten.CursorPosition()
 		p.op.GeoM.Translate(float64(x)-p.dx, float64(y)-p.dy)
+		p.Token.Draw(target, p.op)
 	}
-	p.Token.Draw(target, p.op)
 }
 
 func (p *Piece) Rank() int {
@@ -52,10 +54,9 @@ func (p *Piece) Position(rank, file int) {
 	p.dragging = false
 }
 
-func (p *Piece) StartDrag() {
+func (p *Piece) StartDrag(x, y int) {
 	if !p.dragging {
 		p.dragging = true
-		x, y := ebiten.CursorPosition()
 		originX, originY := p.TranslateRFtoXY(p.rank, p.file)
 		p.dx = float64(x) - originX
 		p.dy = float64(y) - originY
@@ -66,9 +67,18 @@ func (p *Piece) IsDragging() bool {
 	return p.dragging
 }
 
-func (p *Piece) StopDrag() {
+func (p *Piece) StopDrag(rank, file int) bool {
 	if p.dragging {
-		p.dragging = true
+		p.dragging = false
+		p.Position(rank, file)
+		return true
+	}
+	return false
+}
+
+func (p *Piece) CancelDrag() {
+	if p.dragging {
+		p.dragging = false
 		p.Position(p.rank, p.file)
 	}
 }

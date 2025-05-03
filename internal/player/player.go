@@ -27,7 +27,7 @@ func NewPlayer(c Configuration, color uint8) *Player {
 
 func (p *Player) Draw(target *ebiten.Image) {
 	for _, e := range p.pieces {
-		e.Draw(target)
+		e.Draw(target, true)
 	}
 }
 
