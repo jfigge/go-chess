@@ -26,7 +26,6 @@ type Game struct {
 	debugEnabled     bool
 	debugY           int
 	debugX           [8]int
-	fenY             int
 }
 
 func NewGame(options ...Options) *Game {
@@ -55,12 +54,11 @@ func NewGame(options ...Options) *Game {
 	for i := 0; i < 8; i++ {
 		game.debugX[i] = game.squareSize*i + 2
 	}
-	game.debugY = game.squareSize*8 + 2
-	game.fenY = game.squareSize*8 + game.fontHeight + 2
+	game.debugY = game.squareSize * 8
 	game.boardWidth = game.squareSize * 8
 	game.boardHeight = game.squareSize * 8
 	if game.debugEnabled {
-		game.boardHeight += game.fontHeight*2 + 2
+		game.boardHeight += game.fontHeight
 	}
 	if game.showStrength {
 		game.boardWidth += game.fontHeight
@@ -78,7 +76,7 @@ func (g *Game) Update() error {
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyD) {
 		g.debugEnabled = !g.debugEnabled
 		if g.debugEnabled {
-			g.targetHeight = g.squareSize*8 + g.fontHeight*2 + 2
+			g.targetHeight = g.squareSize*8 + g.fontHeight
 		} else {
 			g.targetHeight = g.squareSize * 8
 		}

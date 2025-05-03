@@ -96,22 +96,30 @@ func (b *Board) Draw(target *ebiten.Image) {
 	if b.ShowStrength() {
 		target.DrawImage(b.strength, b.strengthOp)
 	}
-
+	if b.enpassant != -1 {
+		rank, file := b.TranslateIndexToRF(b.enpassant)
+		x, y := b.TranslateRFtoXY(rank, file)
+		vector.DrawFilledRect(target, float32(x), float32(y), float32(b.SquareSize()), float32(b.SquareSize()), b.ColorValid(), false)
+	}
 	if b.EnableDebug() {
 		x, y := ebiten.CursorPosition()
 		if r, f, ok := b.TranslateXYtoRF(x, y); ok {
 			index := b.TranslateRFtoIndex(r, f)
 			notation := b.TranslateRFtoN(r, f)
-			ebitenutil.DebugPrintAt(target, fmt.Sprintf("RF: %d,%d", r, f), b.DebugX(1), b.DebugY())
-			ebitenutil.DebugPrintAt(target, fmt.Sprintf("XY: %d,%d", x, y), b.DebugX(2), b.DebugY())
-			ebitenutil.DebugPrintAt(target, fmt.Sprintf("Idx: %d %s", index, strings.ToUpper(notation)), b.DebugX(0), b.DebugY())
+			ebitenutil.DebugPrintAt(target, fmt.Sprintf("Index: %d", index), b.DebugX(0), b.DebugY())
+			ebitenutil.DebugPrintAt(target, fmt.Sprintf("RF: %d,%d %s", r, f, strings.ToUpper(notation)), b.DebugX(1), b.DebugY())
+			if b.enpassant != -1 {
+				rank, file := b.TranslateIndexToRF(b.enpassant)
+				notation = b.TranslateRFtoN(rank, file)
+				ebitenutil.DebugPrintAt(target, fmt.Sprintf("EnPas: "+notation), b.DebugX(2), b.DebugY())
+			}
+			ebitenutil.DebugPrintAt(target, fmt.Sprintf("XY: %d,%d", x, y), b.DebugX(3), b.DebugY())
 			p := b.highlightSquare.piece
 			if p != nil {
 				ebitenutil.DebugPrintAt(target, p.Token.Color()+" "+p.Name(), b.DebugX(4), b.DebugY())
 			}
 		}
 		ebitenutil.DebugPrintAt(target, "Move: "+b.Turn(b.turn), b.DebugX(6), b.DebugY())
-		ebitenutil.DebugPrintAt(target, "Fen:"+b.fen, b.DebugX(0), b.DebugFen())
 	}
 }
 

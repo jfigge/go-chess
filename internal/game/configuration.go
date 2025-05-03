@@ -110,6 +110,3 @@ func (g *Game) DebugX(file int) int {
 func (g *Game) DebugY() int {
 	return g.debugY
 }
-func (g *Game) DebugFen() int {
-	return g.fenY
-}

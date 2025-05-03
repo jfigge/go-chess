@@ -19,7 +19,6 @@ type Configuration interface {
 	EnableDebug() bool
 	DebugX(file int) int
 	DebugY() int
-	DebugFen() int
 
 	Token(pieceType uint8) Token
 	SheetImageSize() int
