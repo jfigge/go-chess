@@ -8,6 +8,7 @@ import (
 	"image/color"
 	"math"
 	"strconv"
+	"us.figge.chess/internal/common"
 )
 
 type ui struct {
@@ -74,4 +75,24 @@ func (b *Board) renderForeground() {
 	b.strength.Clear()
 	vector.DrawFilledRect(b.strength, 0, h1, float32(b.FontHeight()), s-h1, b.ColorStrength(), false)
 	ebitenutil.DebugPrintAt(b.strength, fmt.Sprintf("%d", val), 0, int((s-float32(b.FontHeight()))/2))
+
+	enPassant := b.EnPassant()
+	if enPassant != 0 {
+		rank := 6
+		file := int(9 - enPassant)
+		if b.Turn() == common.Black {
+			rank = 3
+		}
+		b.enPassant = &highlight{
+			Configuration: b.Configuration,
+			rank:          rank,
+			file:          file,
+			index:         b.TranslateRFtoIndex(rank, file),
+			notation:      string([]byte{byte('A' + file + 1)}),
+			size:          float32(b.SquareSize()),
+			color:         b.ColorValid(),
+		}
+		b.enPassant.x, b.enPassant.y = b.TranslateRFtoXY(rank, file)
+
+	}
 }

@@ -180,7 +180,7 @@ func (p *position) setEnpassant(enpassant string) {
 		if _, file, ok := p.TranslateNtoRF(enpassant); ok {
 			p.SetEnPassant(uint8(9 - file))
 		} else {
-			fmt.Printf("Invalid enpassant fen: %s\n", enpassant)
+			fmt.Printf("Invalid enPassant fen: %s\n", enpassant)
 		}
 	}
 }

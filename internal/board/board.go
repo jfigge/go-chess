@@ -31,6 +31,7 @@ type Board struct {
 	ui
 	fen       string
 	highlight *highlight
+	enPassant *highlight
 
 	//dragPiece *piece.Piece
 	//dragIndex int
@@ -118,22 +119,19 @@ func (b *Board) Draw(target *ebiten.Image) {
 	if b.ShowStrength() {
 		target.DrawImage(b.strength, b.strengthOp)
 	}
-	//if b.enpassant != -1 {
-	//	rank, file := b.TranslateIndexToRF(b.enpassant)
-	//	x, y := b.TranslateRFtoXY(rank, file)
-	//	vector.DrawFilledRect(target, float32(x), float32(y), float32(b.SquareSize()), float32(b.SquareSize()), b.ColorValid(), false)
-	//}
 	if b.EnableDebug() {
 		if b.highlight != nil {
-			b.highlight.Debug(target)
-		}
-		enPassant := b.EnPassant()
-		if enPassant != 0 {
-			rank := "6"
-			if b.Turn() == Black {
-				rank = "3"
+			h := b.highlight
+			ebitenutil.DebugPrintAt(target, fmt.Sprintf("Index: %d", h.index), h.DebugX(0), h.DebugY())
+			ebitenutil.DebugPrintAt(target, fmt.Sprintf("RF: %d,%d %s", h.rank, h.file, strings.ToUpper(h.notation)), h.DebugX(1), h.DebugY())
+			ebitenutil.DebugPrintAt(target, fmt.Sprintf("XY: %d,%d", h.cursorX, h.cursorY), h.DebugX(3), h.DebugY())
+			if h.piece != nil {
+				ebitenutil.DebugPrintAt(target, h.piece.Color()+" "+h.piece.Name(), h.DebugX(4), h.DebugY())
 			}
-			ebitenutil.DebugPrintAt(target, fmt.Sprintf("EnPas: "+string([]byte{'a' + 8 - enPassant})+rank), b.DebugX(2), b.DebugY())
+		}
+		if b.enPassant != nil {
+			b.enPassant.Draw(target)
+			ebitenutil.DebugPrintAt(target, "EnPas: "+b.enPassant.notation, b.DebugX(2), b.DebugY())
 		}
 		ebitenutil.DebugPrintAt(target, "Move: "+b.TurnName(b.Turn()), b.DebugX(6), b.DebugY())
 	}
@@ -143,13 +141,4 @@ func (h *highlight) Draw(dst *ebiten.Image) {
 	op.GeoM.Reset()
 	op.GeoM.Translate(h.x, h.y)
 	vector.DrawFilledRect(dst, float32(h.x), float32(h.y), h.size, h.size, h.color, false)
-}
-
-func (h *highlight) Debug(dst *ebiten.Image) {
-	ebitenutil.DebugPrintAt(dst, fmt.Sprintf("Index: %d", h.index), h.DebugX(0), h.DebugY())
-	ebitenutil.DebugPrintAt(dst, fmt.Sprintf("RF: %d,%d %s", h.rank, h.file, strings.ToUpper(h.notation)), h.DebugX(1), h.DebugY())
-	ebitenutil.DebugPrintAt(dst, fmt.Sprintf("XY: %d,%d", h.cursorX, h.cursorY), h.DebugX(3), h.DebugY())
-	if h.piece != nil {
-		ebitenutil.DebugPrintAt(dst, h.piece.Color()+" "+h.piece.Name(), h.DebugX(4), h.DebugY())
-	}
 }
