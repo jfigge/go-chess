@@ -13,7 +13,7 @@ func (g *Game) SquareSize() int {
 	return g.squareSize
 }
 
-func (g *Game) Token(pieceType uint8) common.Token {
+func (g *Game) Piece(pieceType uint8) common.Piece {
 	return g.entities[pieceType]
 }
 
@@ -21,7 +21,7 @@ func (g *Game) SheetImageSize() int {
 	return g.sheetImageSize
 }
 
-func (g *Game) Turn(colorType uint8) string {
+func (g *Game) TurnName(colorType uint8) string {
 	return colors[colorType]
 }
 
@@ -92,13 +92,6 @@ func (g *Game) TranslateNtoRF(n string) (int, int, bool) {
 		return 0, 0, false
 	}
 	return rank, file, true
-}
-
-func (g *Game) TranslateNtoIndex(n string) (int, bool) {
-	if rank, file, ok := g.TranslateNtoRF(n); ok {
-		return g.TranslateRFtoIndex(rank, file), true
-	}
-	return 0xFF, false
 }
 
 // -- DEBUG -------------------------------------------------------------

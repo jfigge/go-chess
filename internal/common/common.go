@@ -14,13 +14,12 @@ type Configuration interface {
 	TranslateIndexToXY(index int) (float64, float64)
 	TranslateRFtoN(rank, file int) string
 	TranslateNtoRF(notation string) (int, int, bool)
-	TranslateNtoIndex(notation string) (int, bool)
 
 	EnableDebug() bool
 	DebugX(file int) int
 	DebugY() int
 
-	Token(pieceType uint8) Token
+	Piece(pieceType uint8) Piece
 	SheetImageSize() int
 	ColorWhite() color.Color
 	ColorBlack() color.Color
@@ -29,7 +28,7 @@ type Configuration interface {
 	ColorHighlight() color.Color
 	ColorStrength() color.Color
 
-	Turn(uint8) string
+	TurnName(uint8) string
 	HighlightAttacks() bool
 	ShowStrength() bool
 	ShowLabels() bool
@@ -39,7 +38,7 @@ type Configuration interface {
 	TextSize(str string, size float64) (float64, float64)
 }
 
-type Token interface {
+type Piece interface {
 	Draw(target *ebiten.Image, op *ebiten.DrawImageOptions)
 	Name() string
 	Color() string
@@ -55,28 +54,48 @@ type Token interface {
 }
 
 const (
-	White uint8 = 0b00000000
-	Black uint8 = 0b00000001
+	// Move stored in White Pawn Rank 1
+	TurnMask uint8 = 0b00000001
+	White    uint8 = 0b00000000
+	Black    uint8 = 0b00000001
 
-	Pawn   uint8 = 0b0000000
-	Knight uint8 = 0b0000010
-	Bishop uint8 = 0b0000100
-	Rook   uint8 = 0b0000110
-	Queen  uint8 = 0b0001000
-	King   uint8 = 0b0001010
+	PieceMask uint8 = 0b00001110
+	Pawn      uint8 = 0b00000000
+	Knight    uint8 = 0b00000010
+	Bishop    uint8 = 0b00000100
+	Rook      uint8 = 0b00000110
+	Queen     uint8 = 0b00001000
+	King      uint8 = 0b00001010
+
+	// Castling rights stored in White Pawn Rank 1
+	CastleRightsMask       uint8 = 0b00011110
+	CastleRightsWhiteKing  uint8 = 0b00000010
+	CastleRightsWhiteQueen uint8 = 0b00000100
+	CastleRightsBlackKing  uint8 = 0b00001000
+	CastleRightsBlackQueen uint8 = 0b00010000
+
+	// EnPassant stored in Black Pawn Rank 8
+	EnPassantMask uint8 = 0b11111111
+	EnPassantA    uint8 = 0b00001000
+	EnPassantB    uint8 = 0b00000111
+	EnPassantC    uint8 = 0b00000110
+	EnPassantD    uint8 = 0b00000101
+	EnPassantE    uint8 = 0b00000100
+	EnPassantF    uint8 = 0b00000011
+	EnPassantG    uint8 = 0b00000010
+	EnPassantH    uint8 = 0b00000001
+
+	// Bit board index
+	WhitePawn   uint8 = 0b00000000
+	BlackPawn   uint8 = 0b00000001
+	WhiteKnight uint8 = 0b00000010
+	BlackKnight uint8 = 0b00000011
+	WhiteBishop uint8 = 0b00000100
+	BlackBishop uint8 = 0b00000101
+	WhiteRook   uint8 = 0b00000110
+	BlackRook   uint8 = 0b00000111
+	WhiteQueen  uint8 = 0b00001000
+	BlackQueen  uint8 = 0b00001001
+	WhiteKing   uint8 = 0b00001010
+	BlackKing   uint8 = 0b00001011
 )
-
-var FenPieceMap = map[byte]uint8{
-	'p': Pawn | Black,
-	'n': Knight | Black,
-	'b': Bishop | Black,
-	'r': Rook | Black,
-	'q': Queen | Black,
-	'k': King | Black,
-	'P': Pawn | White,
-	'N': Knight | White,
-	'B': Bishop | White,
-	'R': Rook | White,
-	'Q': Queen | White,
-	'K': King | White,
-}

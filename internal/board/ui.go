@@ -20,7 +20,7 @@ type ui struct {
 	foreground       *ebiten.Image
 	strength         *ebiten.Image
 	strengthOp       *ebiten.DrawImageOptions
-	highlightSquare  *square
+	//highlightSquare  *square
 }
 
 func (b *Board) initializeImages() {
@@ -62,9 +62,7 @@ func (b *Board) renderBackground() {
 
 func (b *Board) renderForeground() {
 	b.foreground = ebiten.NewImage(b.SquareSize()*8, b.SquareSize()*8)
-	b.players[0].Draw(b.foreground)
-	b.players[1].Draw(b.foreground)
-
+	b.drawPieces(b.foreground)
 	s := float32(b.SquareSize() * 8)
 	_, y := ebiten.CursorPosition()
 	pct := float32(y) / s
@@ -76,5 +74,4 @@ func (b *Board) renderForeground() {
 	b.strength.Clear()
 	vector.DrawFilledRect(b.strength, 0, h1, float32(b.FontHeight()), s-h1, b.ColorStrength(), false)
 	ebitenutil.DebugPrintAt(b.strength, fmt.Sprintf("%d", val), 0, int((s-float32(b.FontHeight()))/2))
-	b.fen = b.Fen()
 }

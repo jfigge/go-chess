@@ -6,11 +6,12 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"us.figge.chess/internal/board"
+	"us.figge.chess/internal/common"
 )
 
 type Game struct {
 	*ColorScheme
-	entities       map[uint8]*Entity
+	entities       map[uint8]common.Piece
 	board          *board.Board
 	squareSize     int
 	sheetImageSize int
@@ -46,7 +47,7 @@ func NewGame(options ...Options) *Game {
 	for _, option := range options {
 		option(game)
 	}
-	game.entities = makeEntities(game)
+	game.entities = initialize(game)
 	game.board = board.NewBoard(
 		game,
 		board.OptSetup("rn1qkbnr/pppp1ppp/b2Qp3/8/8/8/PPPPPPPP/RNB1KBNR b Qq c4"),
@@ -96,8 +97,6 @@ func (g *Game) Update() error {
 		g.showFPS = !g.showFPS
 	} else if inpututil.IsKeyJustPressed(ebiten.KeyL) {
 		g.showLabels = !g.showLabels
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyR) {
-		g.board.Setup("")
 	}
 	if g.targetHeight > g.boardHeight {
 		g.boardHeight++
