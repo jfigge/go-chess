@@ -36,42 +36,43 @@ type position struct {
 	bitboards [12]uint64
 }
 
-func (p *position) Turn() uint8 {
+func (p *position) turn() uint8 {
 	return uint8(p.bitboards[common.Pawn|common.White]) & common.TurnMask
 }
-func (p *position) CastleRights() uint8 {
+func (p *position) castleRights() uint8 {
 	return uint8(p.bitboards[common.Pawn|common.White]) & common.CastleRightsMask
 }
-func (p *position) EnPassant() uint8 {
+func (p *position) enPassant() uint8 {
 	return uint8(p.bitboards[common.Pawn|common.Black] >> 56)
 }
-func (p *position) SetTurn(turn uint8) {
+func (p *position) setTurn(turn uint8) {
 	p.bitboards[common.Pawn|common.White] &= ^uint64(common.TurnMask)
 	p.bitboards[common.Pawn|common.White] |= uint64(turn)
 }
-func (p *position) SetCastleRights(castleRights uint8) {
+func (p *position) setCastleRights(castleRights uint8) {
 	p.bitboards[common.Pawn|common.White] &= ^uint64(common.CastleRightsMask)
 	p.bitboards[common.Pawn|common.White] |= uint64(castleRights)
 }
-func (p *position) SetEnPassant(enPassant uint8) {
+func (p *position) setEnPassant(enPassant uint8) {
 	p.bitboards[common.Pawn|common.Black] &= ^uint64(common.EnPassantMask)
 	p.bitboards[common.Pawn|common.Black] |= uint64(enPassant) << 56
 }
-func (p *position) SetPiece(pieceType uint8, rank, file int) {
+
+func (p *position) setPiece(pieceType uint8, rank, file int) {
 	index := p.TranslateRFtoIndex(rank, file)
 	if index < 0 {
 		panic("Invalid bit position")
 	}
 	bitboards[pieceType] |= uint64(1) << index
 }
-func (p *position) RemovePiece(pieceType uint8, rank, file int) {
+func (p *position) removePiece(pieceType uint8, rank, file int) {
 	index := p.TranslateRFtoIndex(rank, file)
 	if index < 0 {
 		panic("Invalid bit position")
 	}
 	bitboards[pieceType] &= ^(uint64(1) << index)
 }
-func (p *position) ClearSquare(rank, file int) {
+func (p *position) clearPiece(rank, file int) {
 	index := p.TranslateRFtoIndex(rank, file)
 	if index < 0 {
 		panic("Invalid bit position")
@@ -80,24 +81,16 @@ func (p *position) ClearSquare(rank, file int) {
 		bitboards[b] &= ^(uint64(1) << index)
 	}
 }
-
-func (p *position) Hash() uint64 {
-	var hash uint64
-	for i := range bitboards {
-		board := bitboards[i]
-		index := 0
-		for board != 0 {
-			if board&1 != 0 {
-				hash ^= keys[index]
-			}
-			board >>= 1
-			index++
+func (p *position) findPiece(index int) (uint8, bool) {
+	for b := range uint8(12) {
+		if bitboards[b]&(1<<index) != 0 {
+			return b, true
 		}
 	}
-	return hash
+	return 0, false
 }
 
-func (p *position) setupBoard(fen string) {
+func (p *position) SetupBoard(fen string) {
 	fen = strings.TrimSpace(fen)
 	if fen == "" {
 		fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq _ 0 1"
@@ -121,37 +114,37 @@ bitboards:
 			break bitboards
 		case 'K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p':
 			rank, file := p.TranslateIndexToRF(index)
-			p.SetPiece(fenPieceMap[c], rank, file)
+			p.setPiece(fenPieceMap[c], rank, file)
 			index++
 		}
 	}
 	parts := strings.Split(fen, " ")
 	if len(parts) > 0 && len(parts[0]) > 0 {
-		p.setTurn(parts[0])
+		p.readFenTurn(parts[0])
 	}
 	if len(parts) > 1 && len(parts[1]) > 0 {
-		p.setCastling(parts[1])
+		p.readFenCastling(parts[1])
 	}
 	if len(parts) > 2 && len(parts[2]) > 0 {
-		p.setEnpassant(parts[2])
+		p.readFenEnpassant(parts[2])
 	}
 	if len(parts) > 3 && len(parts[3]) > 0 {
-		p.setHalfMove(parts[3])
+		p.readFenHalfMove(parts[3])
 	}
 	if len(parts) > 4 && len(parts[4]) > 0 {
-		p.setFullMove(parts[4])
+		p.readFenFullMove(parts[4])
 	}
 }
-func (p *position) setTurn(turn string) {
+func (p *position) readFenTurn(turn string) {
 	t := common.White
 	if strings.EqualFold(turn, "b") {
 		t = common.Black
 	} else if turn != "w" {
 		fmt.Printf("Invalid turn fen: %s\n", turn)
 	}
-	p.SetTurn(t)
+	p.setTurn(t)
 }
-func (p *position) setCastling(castling string) {
+func (p *position) readFenCastling(castling string) {
 	castleRights := uint8(0)
 	for _, c := range castling {
 		switch c {
@@ -170,28 +163,28 @@ func (p *position) setCastling(castling string) {
 			fmt.Printf("Invalid castling fen: %s\n", castling)
 		}
 	}
-	p.SetCastleRights(castleRights)
+	p.setCastleRights(castleRights)
 }
-func (p *position) setEnpassant(enpassant string) {
+func (p *position) readFenEnpassant(enpassant string) {
 	switch enpassant {
 	case "-":
-		p.SetEnPassant(uint8(0))
+		p.setEnPassant(uint8(0))
 	default:
 		if _, file, ok := p.TranslateNtoRF(enpassant); ok {
-			p.SetEnPassant(uint8(9 - file))
+			p.setEnPassant(uint8(9 - file))
 		} else {
 			fmt.Printf("Invalid enPassant fen: %s\n", enpassant)
 		}
 	}
 }
-func (p *position) setHalfMove(halfMove string) {
+func (p *position) readFenHalfMove(halfMove string) {
 	halfMoveCount := 0
 	if _, err := fmt.Sscanf(halfMove, "%d", &halfMoveCount); err != nil {
 		fmt.Printf("Invalid halfmove fen: %s\n", halfMove)
 	}
 	p.halfmoves = make([]uint64, halfMoveCount)
 }
-func (p *position) setFullMove(fullMove string) {
+func (p *position) readFenFullMove(fullMove string) {
 	fullMoveCount := 0
 	if _, err := fmt.Sscanf(fullMove, "%d", &fullMoveCount); err != nil {
 		fmt.Printf("Invalid fullmove fen: %s\n", fullMove)
@@ -199,7 +192,22 @@ func (p *position) setFullMove(fullMove string) {
 	p.fullmoves = fullMoveCount
 }
 
-func (p *position) generateFen() string {
+func (p *position) Hash() uint64 {
+	var hash uint64
+	for i := range bitboards {
+		board := bitboards[i]
+		index := 0
+		for board != 0 {
+			if board&1 != 0 {
+				hash ^= keys[index]
+			}
+			board >>= 1
+			index++
+		}
+	}
+	return hash
+}
+func (p *position) RecordBoardFen() string {
 	sb := strings.Builder{}
 	count := 0
 	for rank := 1; rank <= 8; rank++ {
@@ -218,20 +226,12 @@ func (p *position) generateFen() string {
 			sb.WriteByte('/')
 		}
 	}
-	p.writeTurn(&sb)
-	p.writeCastling(&sb)
-	p.writeEnpassant(&sb)
-	p.writeHalfMove(&sb)
-	p.writeFullMove(&sb)
+	p.writeFenTurn(&sb)
+	p.writeFenCastling(&sb)
+	p.writeFenEnpassant(&sb)
+	p.writeFenHalfMove(&sb)
+	p.writeFenFullMove(&sb)
 	return sb.String()
-}
-func (p *position) findPiece(index int) (uint8, bool) {
-	for b := range uint8(12) {
-		if bitboards[b]&(1<<index) != 0 {
-			return b, true
-		}
-	}
-	return 0, false
 }
 func (p *position) writeFenEntry(sb *strings.Builder, count *int, piece common.Piece) {
 	if *count > 0 {
@@ -242,16 +242,16 @@ func (p *position) writeFenEntry(sb *strings.Builder, count *int, piece common.P
 	}
 	*count = 0
 }
-func (p *position) writeTurn(sb *strings.Builder) {
-	if p.Turn() == common.White {
+func (p *position) writeFenTurn(sb *strings.Builder) {
+	if p.turn() == common.White {
 		sb.WriteString(" w")
 	} else {
 		sb.WriteString(" b")
 	}
 }
-func (p *position) writeCastling(sb *strings.Builder) {
+func (p *position) writeFenCastling(sb *strings.Builder) {
 	sb.WriteByte(' ')
-	castlingRights := p.CastleRights()
+	castlingRights := p.castleRights()
 	if castlingRights == 0 {
 		sb.WriteByte('-')
 		return
@@ -269,13 +269,13 @@ func (p *position) writeCastling(sb *strings.Builder) {
 		sb.WriteByte('q')
 	}
 }
-func (p *position) writeEnpassant(sb *strings.Builder) {
-	enPassant := p.EnPassant()
-	if enPassant == 0 {
+func (p *position) writeFenEnpassant(sb *strings.Builder) {
+	ep := p.enPassant()
+	if ep == 0 {
 		sb.WriteString(" -")
 	} else {
-		notation := string([]byte{'a' + 8 - enPassant})
-		if p.Turn() == common.White {
+		notation := string([]byte{'a' + 8 - ep})
+		if p.turn() == common.White {
 			notation += "6"
 		} else {
 			notation += "3"
@@ -283,11 +283,11 @@ func (p *position) writeEnpassant(sb *strings.Builder) {
 		sb.WriteString(" " + notation)
 	}
 }
-func (p *position) writeHalfMove(sb *strings.Builder) {
+func (p *position) writeFenHalfMove(sb *strings.Builder) {
 	sb.WriteByte(' ')
 	sb.WriteString(fmt.Sprintf("%d", len(p.halfmoves)))
 }
-func (p *position) writeFullMove(sb *strings.Builder) {
+func (p *position) writeFenFullMove(sb *strings.Builder) {
 	sb.WriteByte(' ')
 	sb.WriteString(fmt.Sprintf("%d", p.fullmoves))
 }

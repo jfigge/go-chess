@@ -61,7 +61,7 @@ func (b *Board) renderBackground() {
 	}
 }
 
-func (b *Board) renderForeground() {
+func (b *Board) renderForeground(ep uint8) {
 	b.foreground = ebiten.NewImage(b.SquareSize()*8, b.SquareSize()*8)
 	b.drawPieces(b.foreground)
 	s := float32(b.SquareSize() * 8)
@@ -76,11 +76,10 @@ func (b *Board) renderForeground() {
 	vector.DrawFilledRect(b.strength, 0, h1, float32(b.FontHeight()), s-h1, b.ColorStrength(), false)
 	ebitenutil.DebugPrintAt(b.strength, fmt.Sprintf("%d", val), 0, int((s-float32(b.FontHeight()))/2))
 
-	enPassant := b.EnPassant()
-	if enPassant != 0 {
+	if ep != 0 {
 		rank := 6
-		file := int(9 - enPassant)
-		if b.Turn() == common.Black {
+		file := int(9 - ep)
+		if b.turn() == common.Black {
 			rank = 3
 		}
 		b.enPassant = &highlight{

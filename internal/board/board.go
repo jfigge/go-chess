@@ -47,10 +47,10 @@ func NewBoard(c Configuration, options ...Options) *Board {
 	}
 	board.initializeImages()
 	board.renderBackground()
-	board.setupBoard(board.fen)
-	fmt.Println("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
-	fmt.Println(board.generateFen())
-	board.renderForeground()
+	board.SetupBoard(board.fen)
+	fmt.Println(board.fen)
+	fmt.Println(board.RecordBoardFen())
+	board.renderForeground(0)
 	return board
 }
 
@@ -133,7 +133,7 @@ func (b *Board) Draw(target *ebiten.Image) {
 			b.enPassant.Draw(target)
 			ebitenutil.DebugPrintAt(target, "EnPas: "+b.enPassant.notation, b.DebugX(2), b.DebugY())
 		}
-		ebitenutil.DebugPrintAt(target, "Move: "+b.TurnName(b.Turn()), b.DebugX(6), b.DebugY())
+		ebitenutil.DebugPrintAt(target, "Move: "+b.TurnName(b.turn()), b.DebugX(6), b.DebugY())
 	}
 }
 func (h *highlight) Draw(dst *ebiten.Image) {

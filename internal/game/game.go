@@ -50,8 +50,10 @@ func NewGame(options ...Options) *Game {
 	game.entities = initialize(game)
 	game.board = board.NewBoard(
 		game,
-		board.OptSetup("rn1qkbnr/pppp1ppp/b2Qp3/8/2P5/8/PP1PPPPP/RNB1KBNR b Qq c4"),
+		//board.OptSetup("rn1qkbnr/pppp1ppp/b2Qp3/8/2P5/8/PP1PPPPP/RNB1KBNR b Qq c4"),
 		//board.OptSetup("r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1"),
+		board.OptSetup("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"),
+		//board.OptSetup("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"),
 	)
 	for i := 0; i < 8; i++ {
 		game.debugX[i] = game.squareSize*i + 2
