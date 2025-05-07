@@ -10,9 +10,13 @@ import (
 )
 
 var (
-	keys        [768]uint64
-	bitboards   [12]uint64
-	fenPieceMap = map[byte]uint8{
+	keys           [768]uint64
+	bitboards      [12]uint64
+	knightMoves    [64]uint64
+	kingMoves      [64]uint64
+	whitePawnMoves [64]uint64
+	blackPawnMoves [64]uint64
+	fenPieceMap    = map[byte]uint8{
 		'P': common.White | common.Pawn,
 		'N': common.White | common.Knight,
 		'B': common.White | common.Bishop,
@@ -28,12 +32,21 @@ var (
 	}
 )
 
+const RANK8 = 0xFF00000000000000
+const RANK1 = 0x00000000000000FF
+const FileA = 0x0101010101010101
+const FileH = 0x8080808080808080
+
 type position struct {
 	common.Configuration
 	hashKey   string
 	halfmoves []uint64
 	fullmoves int
 	bitboards [12]uint64
+}
+
+func (p *position) WhitePieces() uint64 {
+	return 0
 }
 
 func (p *position) turn() uint8 {
@@ -325,6 +338,25 @@ func (p *position) debugPrintBoard() {
 	}
 	fmt.Print("\n   a b c d e f g h\n")
 }
+func debugPrintBitBoard(bitboard uint64, i int) {
+	fmt.Printf("Index: %d\n", i)
+	for rank := 1; rank <= 8; rank++ {
+		fmt.Printf("%d  ", 9-rank)
+		for file := 1; file <= 8; file++ {
+			index := (rank-1)*8 + file - 1
+			str := ". "
+			if index == i {
+				str = "X "
+			}
+			if bitboard&(1<<index) != 0 {
+				str = "1 "
+			}
+			fmt.Print(str)
+		}
+		fmt.Println()
+	}
+	fmt.Print("\n   a b c d e f g h\n")
+}
 
 func init() {
 	// Key generation
@@ -335,5 +367,94 @@ func init() {
 			panic("Random key generation failed")
 		}
 		keys[i] = binary.BigEndian.Uint64(bs)
+	}
+	generateKnightMoves()
+	generateKingMoves()
+	generatePawnMoves()
+}
+
+func generateKnightMoves() {
+	for rank := 1; rank <= 8; rank++ {
+		for file := 1; file <= 8; file++ {
+			index := (rank-1)*8 + file - 1
+			if rank > 2 && file > 1 {
+				knightMoves[index] |= 1 << (index - 17) //nnw
+			}
+			if rank > 2 && file < 8 {
+				knightMoves[index] |= 1 << (index - 15) //nne
+			}
+			if rank > 1 && file > 2 {
+				knightMoves[index] |= 1 << (index - 10) //wnw
+			}
+			if rank > 1 && file < 7 {
+				knightMoves[index] |= 1 << (index - 6) //ene
+			}
+			if rank < 8 && file > 2 {
+				knightMoves[index] |= 1 << (index + 6) //ese
+			}
+			if rank < 8 && file < 7 {
+				knightMoves[index] |= 1 << (index + 10) // wsw
+			}
+			if rank < 7 && file > 1 {
+				knightMoves[index] |= 1 << (index + 15) // sse
+			}
+			if rank < 7 && file < 8 {
+				knightMoves[index] |= 1 << (index + 17) // ssw
+			}
+		}
+	}
+}
+func generateKingMoves() {
+	for rank := 1; rank <= 8; rank++ {
+		for file := 1; file <= 8; file++ {
+			index := (rank-1)*8 + file - 1
+			if rank > 1 && file > 1 {
+				kingMoves[index] |= 1 << (index - 9) //nnw
+			}
+			if rank > 1 {
+				kingMoves[index] |= 1 << (index - 8) //nnw
+			}
+			if rank > 1 && file < 8 {
+				kingMoves[index] |= 1 << (index - 7) //nnw
+			}
+
+			if file > 1 {
+				kingMoves[index] |= 1 << (index - 1) //nnw
+			}
+			if file < 8 {
+				kingMoves[index] |= 1 << (index + 1) //nnw
+			}
+
+			if rank < 8 && file > 1 {
+				kingMoves[index] |= 1 << (index + 7) //nnw
+			}
+			if rank < 8 {
+				kingMoves[index] |= 1 << (index + 8) //nnw
+			}
+			if rank < 8 && file < 8 {
+				kingMoves[index] |= 1 << (index + 9) //nnw
+			}
+		}
+	}
+}
+func generatePawnMoves() {
+	for rank := 2; rank <= 7; rank++ {
+		for file := 1; file <= 8; file++ {
+			index := (rank-1)*8 + file - 1
+			if file > 1 {
+				whitePawnMoves[index] |= 1 << (index - 9) //nnw
+			}
+			if file < 8 {
+				whitePawnMoves[index] |= 1 << (index - 7) //nnw
+			}
+			if file > 1 {
+				blackPawnMoves[index] |= 1 << (index + 7) //nnw
+			}
+			if file < 8 {
+				blackPawnMoves[index] |= 1 << (index + 9) //nnw
+			}
+			debugPrintBitBoard(blackPawnMoves[index], index)
+			fmt.Println("********************************************")
+		}
 	}
 }
