@@ -10,7 +10,8 @@ import (
 type Piece struct {
 	img       *ebiten.Image
 	pieceType uint8
-	colorType uint8
+	name      string
+	color     string
 }
 
 var (
@@ -65,8 +66,9 @@ func InitPieces(squareSize int) {
 func makeEntity(op *ebiten.DrawImageOptions, squareSize int, sheetSize image.Point, data uint8) *Piece {
 	p := &Piece{
 		img:       ebiten.NewImage(squareSize, squareSize),
-		pieceType: (data & PieceMask) >> 1,
-		colorType: data & PlayerMask,
+		name:      names[(data&PieceMask)>>1],
+		color:     colors[data&PlayerMask],
+		pieceType: data & (PieceMask | PlayerMask),
 	}
 	x := int(data >> 4)
 	y := int(data & PlayerMask)
@@ -84,10 +86,6 @@ func (p *Piece) Draw(dst *ebiten.Image, op *ebiten.DrawImageOptions) {
 	dst.DrawImage(p.img, op)
 }
 
-func (p *Piece) Name() string {
-	return names[p.pieceType]
-}
-
-func (p *Piece) ColorName() string {
-	return colors[p.colorType]
-}
+func (p *Piece) Name() string      { return p.name }
+func (p *Piece) ColorName() string { return p.color }
+func (p *Piece) Type() uint8       { return p.pieceType }

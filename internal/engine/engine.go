@@ -30,3 +30,7 @@ func (e *Engine) GetBoards() []uint64 {
 func (e *Engine) GetPieceType(rank, file uint8) (uint8, bool) {
 	return e.position.findPiece(RFtoB(rank, file))
 }
+
+func (e *Engine) MovePiece(from, to, pieceType uint8) {
+	e.position.MovePiece(from, to, pieceType)
+}

@@ -16,6 +16,9 @@ type Game struct {
 }
 
 func NewGame() *Game {
+	ebiten.SetTPS(20)
+	ebiten.SetVsyncEnabled(true)
+	ebiten.SetScreenClearedEveryFrame(false)
 	eng := engine.NewEngine()
 	g := &Game{
 		board: board.NewBoard(eng,
@@ -25,7 +28,7 @@ func NewGame() *Game {
 			board.OptBlackRGB(0xa9, 0x7a, 0x65),
 		),
 	}
-	g.board.Setup("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+	g.board.Setup("")
 	return g
 }
 

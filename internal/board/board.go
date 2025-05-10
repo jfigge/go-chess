@@ -7,7 +7,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"image/color"
 	"strconv"
+	"us.figge.chess/internal/board/colors"
 	"us.figge.chess/internal/board/graphics"
+	"us.figge.chess/internal/board/highligher"
 	. "us.figge.chess/internal/common"
 	"us.figge.chess/internal/engine"
 )
@@ -17,6 +19,7 @@ const (
 )
 
 type Board struct {
+	colors        *colors.Colors
 	engine        *engine.Engine
 	canvas        *ebiten.Image
 	background    *ebiten.Image
@@ -29,32 +32,25 @@ type Board struct {
 	labelingXOp   *ebiten.DrawImageOptions
 	labelFontSize float64
 
+	lastCursorX int
+	lastCursorY int
+
 	redraw      bool
 	rehighlight bool
-	selector    *Highlight
+	selector    *highligher.DragAndDrop
 
 	debugEnabled bool
 	debugY       int
 	debugX       [8]int
-
-	colorWhite     color.Color
-	colorBlack     color.Color
-	colorValid     color.Color
-	colorInvalid   color.Color
-	colorHighlight color.Color
 
 	squareSize int
 }
 
 func NewBoard(engine *engine.Engine, options ...Option) *Board {
 	b := &Board{
-		engine:         engine,
-		squareSize:     71,
-		colorWhite:     &color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
-		colorBlack:     &color.RGBA{R: 0x88, G: 0x88, B: 0x88, A: 0xff},
-		colorValid:     &color.RGBA{R: 0x44, G: 0xff, B: 0x44, A: 0xff},
-		colorInvalid:   &color.RGBA{R: 0xff, G: 0x44, B: 0x44, A: 0xff},
-		colorHighlight: &color.RGBA{R: 0x88, G: 0x22, B: 0x22, A: 0xff},
+		colors:     colors.NewColors(),
+		engine:     engine,
+		squareSize: 71,
 	}
 	for _, option := range options {
 		option(b)
@@ -77,7 +73,7 @@ func (b *Board) Initialize() {
 	b.labelingXOp = &ebiten.DrawImageOptions{}
 	b.labelingXOp.GeoM.Translate(0, float64(b.squareSize*8)-h)
 	b.labelingY = ebiten.NewImage(int(w), b.squareSize*8)
-	b.selector = NewHighlight(b.engine, b.squareSize, b.colorHighlight)
+	b.selector = highligher.NewDragAndDrop(b, b.squareSize, b.colors.Valid(), b.colors.Highlight())
 
 	for i := range 8 {
 		b.debugY = b.squareSize*8 + 1
@@ -94,13 +90,13 @@ func (b *Board) Initialize() {
 }
 
 func (b *Board) Update() error {
-	x, y := ebiten.CursorPosition()
-	b.rehighlight = b.rehighlight || b.selector.Update(x, y)
+	b.lastCursorX, b.lastCursorY = ebiten.CursorPosition()
+	b.rehighlight = b.rehighlight || b.selector.Update(b.lastCursorX, b.lastCursorY)
 	return nil
 }
 
 func (b *Board) Draw(screen *ebiten.Image) {
-	if b.rehighlight {
+	if b.rehighlight || b.redraw {
 		b.highlights.Clear()
 		b.selector.Draw(b.highlights)
 		b.rehighlight = false
@@ -117,11 +113,17 @@ func (b *Board) Draw(screen *ebiten.Image) {
 		b.redraw = false
 	}
 	screen.DrawImage(b.canvas, nil)
+	if b.selector.IsDragging() {
+		b.selector.DrawDrag(screen)
+	}
 	if b.debugEnabled {
+		s := float32(b.squareSize * 8)
+		vector.DrawFilledRect(screen, 0, s, s, float32(b.debugY), b.colors.Black(), false)
 		if b.selector != nil {
 			b.selector.Debug(screen, b.debugX, b.debugY)
 		}
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("FPS: %0.2f", ebiten.ActualFPS()), b.debugX[7], b.debugY)
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %0.0f", ebiten.ActualTPS()), b.debugX[7], b.debugY)
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X,Y:%d,%d", b.lastCursorX, b.lastCursorY), b.debugX[2], b.debugY)
 	}
 }
 
@@ -130,12 +132,37 @@ func (b *Board) Setup(fen string) {
 	b.generateForeground()
 }
 
+func (b *Board) GetPieceType(rank, file uint8) (uint8, bool) {
+	return b.engine.GetPieceType(rank, file)
+}
+
+func (b *Board) DragBegin(index, pieceType uint8) {
+	b.generateForeground()
+}
+
+func (b *Board) DragEnd(from, to, pieceType uint8, cancelled bool) {
+	if !cancelled {
+		b.engine.MovePiece(from, to, pieceType)
+	}
+	b.generateForeground()
+}
+
+func (b *Board) DragOver(index, pieceType uint8) {}
+
 func (b *Board) generateForeground() {
+	fmt.Println("Generating foreground")
+	dragIndex := -1
+	if b.selector.IsDragging() {
+		dragIndex = int(b.selector.DragIndex())
+	}
 	b.foreground.Clear()
 	bitBoards := b.engine.GetBoards()
 bit:
 	for i := range 64 {
-		bit := uint64(1 << i)
+		if i == dragIndex {
+			continue
+		}
+		bit := uint64(1 << (63 - i))
 		player := PlayerWhite
 		if bitBoards[engine.BitBlack]&bit != 0 {
 			player = PlayerBlack
@@ -165,14 +192,14 @@ bit:
 func (b *Board) generateBackground() {
 	s := float32(b.squareSize)
 	oddEven := 0
-	clr := []color.Color{b.colorWhite, b.colorBlack}
+	clr := []color.Color{b.colors.PlayerWhite(), b.colors.PlayerBlack()}
 
 	_, h := graphics.TextSize("8", b.labelFontSize-2)
 	for i := range 8 {
 		for j := range 8 {
 			index := i*8 + j
 			op := ebiten.DrawImageOptions{}
-			op.GeoM.Translate(float64(j*b.squareSize), float64((7-i)*b.squareSize))
+			op.GeoM.Translate(float64(j*b.squareSize), float64(i*b.squareSize))
 			b.foregroundOp[index] = &op
 			vector.DrawFilledRect(b.background, float32(i)*s, float32(j)*s, s, s, clr[oddEven], false)
 			oddEven = 1 - oddEven

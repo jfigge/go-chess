@@ -1,4 +1,4 @@
-package board
+package highligher
 
 import (
 	"fmt"
@@ -9,30 +9,33 @@ import (
 	"strconv"
 	"us.figge.chess/internal/board/graphics"
 	. "us.figge.chess/internal/common"
-	"us.figge.chess/internal/engine"
 )
 
-type Highlight struct {
-	engine     *engine.Engine
-	squareSize int
-	background color.Color
-	visible    bool
-	index      uint8
-	cursorX    int
-	cursorY    int
-	cursorRank uint8
-	cursorFile uint8
-	highlightX float32
-	highlightY float32
-	piece      *graphics.Piece
+type Highlighter interface {
+	GetPieceType(rank, file uint8) (uint8, bool)
 }
 
-func NewHighlight(eng *engine.Engine, squareSize int, background color.Color) *Highlight {
+type Highlight struct {
+	highlighter Highlighter
+	squareSize  int
+	background  color.Color
+	visible     bool
+	index       uint8
+	cursorX     int
+	cursorY     int
+	cursorRank  uint8
+	cursorFile  uint8
+	highlightX  float32
+	highlightY  float32
+	piece       *graphics.Piece
+}
+
+func NewHighlight(highlighter Highlighter, squareSize int, background color.Color) *Highlight {
 	h := &Highlight{
-		index:      0xff,
-		engine:     eng,
-		squareSize: squareSize,
-		background: background,
+		index:       0xff,
+		highlighter: highlighter,
+		squareSize:  squareSize,
+		background:  background,
 	}
 	h.Update(-1, -1)
 	return h
@@ -58,7 +61,7 @@ func (h *Highlight) Update(x, y int) bool {
 	h.highlightX = hx
 	h.highlightY = hy
 
-	pieceType, present := h.engine.GetPieceType(rank, file)
+	pieceType, present := h.highlighter.GetPieceType(rank, file)
 	if present {
 		h.piece = graphics.GetPiece(pieceType)
 	} else {
@@ -75,7 +78,6 @@ func (h *Highlight) Draw(dst *ebiten.Image) {
 
 func (h *Highlight) Debug(screen *ebiten.Image, debugX [8]int, debugY int) {
 	if h.visible {
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X,Y:%d,%d", h.cursorX, h.cursorY), debugX[2], debugY)
 		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("R,F: %d,%d", h.cursorRank, h.cursorFile), debugX[1], debugY)
 		ebitenutil.DebugPrintAt(screen, "Index: "+strconv.Itoa(int(h.index)), debugX[0], debugY)
 		if h.piece != nil {

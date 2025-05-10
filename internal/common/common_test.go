@@ -104,3 +104,39 @@ func TestNtoRF(t *testing.T) {
 		})
 	}
 }
+
+func TestBtoI(t *testing.T) {
+	tests := map[string]struct {
+		index uint8
+		bit   uint64
+	}{
+		"top-left":     {0, 1 << 63},
+		"top-right":    {7, 1 << 56},
+		"bottom-left":  {56, 1 << 7},
+		"bottom-right": {63, 1 << 0},
+	}
+	for name, test := range tests {
+		t.Run(name, func(tt *testing.T) {
+			bit := BtoI(test.bit)
+			assert.Equal(tt, test.index, bit)
+		})
+	}
+}
+
+func TestItoB(t *testing.T) {
+	tests := map[string]struct {
+		index uint8
+		bit   uint64
+	}{
+		"top-left":     {0, 1 << 63},
+		"top-right":    {7, 1 << 56},
+		"bottom-left":  {56, 1 << 7},
+		"bottom-right": {63, 1 << 0},
+	}
+	for name, test := range tests {
+		t.Run(name, func(tt *testing.T) {
+			bit := ItoB(test.index)
+			assert.Equal(tt, test.bit, bit)
+		})
+	}
+}

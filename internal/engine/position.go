@@ -122,6 +122,15 @@ func (p *Position) RemovePiece(pieceType uint8, rank, file uint8) {
 	p.bitboards[pieceType&PlayerMask] &= ^(uint64(1) << bit)
 	p.bitboards[pieceBoard] &= ^(uint64(1) << bit)
 }
+func (p *Position) MovePiece(fromIndex, toIndex, pieceType uint8) {
+	bitIndex := ItoB(fromIndex)
+	bitBord := pieceToBitBoard[pieceType]
+	bit := uint64(1 << bitIndex)
+	if p.bitboards[bitBord]&bit != 0 {
+
+	}
+}
+
 func (p *Position) ClearSquare(rank, file uint8) {
 	bit := RFtoB(rank, file)
 	for board := BitWhite; board < BitKings; board++ {

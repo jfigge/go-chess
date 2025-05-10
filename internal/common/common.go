@@ -1,5 +1,7 @@
 package common
 
+import "math"
+
 const (
 	notation = "abcdefgh"
 )
@@ -45,6 +47,18 @@ func RFtoB(rank, file uint8) uint8 {
 	return (rank-1)*8 + 8 - file
 }
 
+func ItoB(index uint8) uint64 {
+	return 1 << (63 - index)
+}
+
+// BtoI Bitboard bit index to Index
+func BtoI(bit uint64) uint8 {
+	x := float64(bit)
+	y := math.Log(x) / math.Log(2)
+	return 63 - uint8(y)
+
+}
+
 // BtoRF Bitboard bit index to Rank and File
 func BtoRF(index uint8) (uint8, uint8) {
 	return index/8 + 1, 8 - index%8
@@ -66,7 +80,7 @@ func NtoRF(n string) (uint8, uint8, bool) {
 func XYtoRF(x, y, squareSize int) (uint8, uint8, bool) {
 	rank := uint8(8 - (y-2)/squareSize)
 	file := uint8((x-1)/squareSize + 1)
-	if x < 1 || y < 3 || rank > 8 || file > 8 {
+	if x < 1 || y < 3 || rank < 1 || rank > 8 || file < 1 || file > 8 {
 		return 0, 0, false
 	}
 	return rank, file, true
