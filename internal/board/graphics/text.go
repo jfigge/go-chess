@@ -1,4 +1,4 @@
-package game
+package graphics
 
 import (
 	"bytes"
@@ -9,9 +9,11 @@ import (
 	"image/color"
 )
 
-//go:embed assets/Montserrat-Medium.ttf
-var montserratTTF []byte
-var montserratFaceSource *text.GoTextFaceSource
+var (
+	//go:embed assets/Montserrat-Medium.ttf
+	montserratTTF        []byte
+	montserratFaceSource *text.GoTextFaceSource
+)
 
 func init() {
 	s, err := text.NewGoTextFaceSource(bytes.NewReader(montserratTTF))
@@ -21,7 +23,7 @@ func init() {
 	montserratFaceSource = s
 }
 
-func (g *Game) TextAt(dst *ebiten.Image, str string, x, y int, size float64, clr color.Color) {
+func TextAt(dst *ebiten.Image, str string, x, y int, size float64, clr color.Color) {
 	face := &text.GoTextFace{
 		Source:    montserratFaceSource,
 		Direction: text.DirectionLeftToRight,
@@ -34,7 +36,7 @@ func (g *Game) TextAt(dst *ebiten.Image, str string, x, y int, size float64, clr
 	text.Draw(dst, str, face, op)
 }
 
-func (g *Game) TextSize(str string, size float64) (float64, float64) {
+func TextSize(str string, size float64) (float64, float64) {
 	face := &text.GoTextFace{
 		Source:    montserratFaceSource,
 		Direction: text.DirectionLeftToRight,

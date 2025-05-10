@@ -1,0 +1,497 @@
+package engine
+
+import (
+	"fmt"
+	"strings"
+	. "us.figge.chess/internal/common"
+)
+
+// Bit Boards
+const (
+	BitWhite     uint8 = 0b00000000
+	BitBlack     uint8 = 0b00000001
+	BitPawns     uint8 = 0b00000010
+	BitKnights   uint8 = 0b00000011
+	BitBishops   uint8 = 0b00000100
+	BitRooks     uint8 = 0b00000101
+	BitQueens    uint8 = 0b00000110
+	BitKings     uint8 = 0b00000111
+	BitEnPassant uint8 = 0b00001000
+)
+
+var (
+	//hashKey        string
+	//keys           [576]uint64
+	knightMoves    [64]uint64
+	kingMoves      [64]uint64
+	whitePawnMoves [64]uint64
+	blackPawnMoves [64]uint64
+	fenPieceMap    = map[byte]uint8{
+		'P': PlayerWhite | PiecePawn,
+		'N': PlayerWhite | PieceKnight,
+		'B': PlayerWhite | PieceBishop,
+		'R': PlayerWhite | PieceRook,
+		'Q': PlayerWhite | PieceQueen,
+		'K': PlayerWhite | PieceKing,
+		'p': PlayerBlack | PiecePawn,
+		'n': PlayerBlack | PieceKnight,
+		'b': PlayerBlack | PieceBishop,
+		'r': PlayerBlack | PieceRook,
+		'q': PlayerBlack | PieceQueen,
+		'k': PlayerBlack | PieceKing,
+	}
+
+	pieceToBitBoard = map[uint8]uint8{
+		PlayerWhite | PiecePawn:   BitPawns,
+		PlayerWhite | PieceKnight: BitKnights,
+		PlayerWhite | PieceBishop: BitBishops,
+		PlayerWhite | PieceRook:   BitRooks,
+		PlayerWhite | PieceQueen:  BitQueens,
+		PlayerWhite | PieceKing:   BitKings,
+		PlayerBlack | PiecePawn:   BitPawns,
+		PlayerBlack | PieceKnight: BitKnights,
+		PlayerBlack | PieceBishop: BitBishops,
+		PlayerBlack | PieceRook:   BitRooks,
+		PlayerBlack | PieceQueen:  BitQueens,
+		PlayerBlack | PieceKing:   BitKings,
+	}
+)
+
+const (
+	fen   = "PpNnBbRrQqKk"
+	RANK8 = 0xFF00000000000000
+	RANK1 = 0x00000000000000FF
+	FileA = 0x0101010101010101
+	FileH = 0x8080808080808080
+)
+
+type Position struct {
+	status    uint8
+	bitboards [9]uint64
+	halfMoves []uint64
+	fullMoves int
+}
+
+func NewPosition() *Position {
+	return &Position{
+		status:    PlayerWhite | CastleRightsMask,
+		bitboards: [9]uint64{},
+		halfMoves: make([]uint64, 0),
+		fullMoves: 0,
+	}
+}
+
+func (p *Position) Pieces(turn uint8) uint64 {
+	turn = turn & PlayerMask
+	return p.bitboards[turn]
+}
+
+func (p *Position) Turn() uint8 {
+	return p.status & PlayerMask
+}
+func (p *Position) CastleRights() uint8 {
+	return p.status & CastleRightsMask
+}
+func (p *Position) EnPassant() uint64 {
+	return p.bitboards[BitEnPassant]
+}
+func (p *Position) SetTurn(turn uint8) {
+	p.status &= ^PlayerMask
+	p.status |= turn
+}
+func (p *Position) SetCastleRights(castleRights uint8) {
+	p.status &= ^CastleRightsMask
+	p.status |= castleRights
+}
+func (p *Position) SetEnPassant(rank, file uint8) {
+	bit := RFtoB(rank, file)
+	p.bitboards[BitEnPassant] = uint64(1) << bit
+}
+func (p *Position) ClearEnPassant() {
+	p.bitboards[BitEnPassant] = 0
+}
+func (p *Position) SetPiece(pieceType uint8, rank, file uint8) {
+	bit := RFtoB(rank, file)
+	pieceBoard := pieceToBitBoard[pieceType]
+	p.bitboards[pieceType&PlayerMask] |= uint64(1) << bit
+	p.bitboards[pieceBoard] |= uint64(1) << bit
+}
+func (p *Position) RemovePiece(pieceType uint8, rank, file uint8) {
+	bit := RFtoB(rank, file)
+	pieceBoard := pieceToBitBoard[pieceType]
+	p.bitboards[pieceType&PlayerMask] &= ^(uint64(1) << bit)
+	p.bitboards[pieceBoard] &= ^(uint64(1) << bit)
+}
+func (p *Position) ClearSquare(rank, file uint8) {
+	bit := RFtoB(rank, file)
+	for board := BitWhite; board < BitKings; board++ {
+		p.bitboards[board] &= ^(uint64(1) << bit)
+	}
+}
+func (p *Position) findPiece(index uint8) (uint8, bool) {
+	bit := uint64(1 << index)
+	for b := BitPawns; b < BitKings; b++ {
+		if p.bitboards[b]&bit != 0 {
+			pieceType := (b - 2) << 1
+			if p.bitboards[BitBlack]&bit != 0 {
+				pieceType |= PlayerBlack
+			}
+			return pieceType, true
+		}
+	}
+	return 0, false
+}
+
+func (p *Position) SetupBoard(fen string) {
+	fen = strings.TrimSpace(fen)
+	if fen == "" {
+		fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq _ 0 1"
+	}
+	p.fullMoves = 0
+	p.halfMoves = make([]uint64, 0)
+	p.bitboards = [9]uint64{}
+
+	// Parse the FEN string and set up the board
+	index := uint8(0)
+bitboards:
+	for i := 0; i < len(fen); i++ {
+		c := fen[i]
+		switch c {
+		case '1', '2', '3', '4', '5', '6', '7', '8':
+			index += c - '0'
+		case '/':
+			continue
+		case ' ':
+			fen = fen[i+1:]
+			break bitboards
+		case 'K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p':
+			rank, file := ItoRF(index)
+			p.SetPiece(fenPieceMap[c], rank, file)
+			index++
+		}
+	}
+	parts := strings.Split(fen, " ")
+	if len(parts) > 0 && len(parts[0]) > 0 {
+		p.readFenTurn(parts[0])
+	}
+	if len(parts) > 1 && len(parts[1]) > 0 {
+		p.readFenCastling(parts[1])
+	}
+	if len(parts) > 2 && len(parts[2]) > 0 {
+		p.readFenEnpassant(parts[2])
+	}
+	if len(parts) > 3 && len(parts[3]) > 0 {
+		p.readFenHalfMove(parts[3])
+	}
+	if len(parts) > 4 && len(parts[4]) > 0 {
+		p.readFenFullMove(parts[4])
+	}
+}
+func (p *Position) readFenTurn(turn string) {
+	t := PlayerWhite
+	if strings.EqualFold(turn, "b") {
+		t = PlayerBlack
+	} else if turn != "w" {
+		fmt.Printf("Invalid turn fen: %s\n", turn)
+	}
+	p.SetTurn(t)
+}
+func (p *Position) readFenCastling(castling string) {
+	castleRights := uint8(0)
+	for _, c := range castling {
+		switch c {
+		case 'K':
+			castleRights |= CastleRightsWhiteKing
+		case 'Q':
+			castleRights |= CastleRightsWhiteQueen
+		case 'k':
+			castleRights |= CastleRightsBlackKing
+		case 'q':
+			castleRights |= CastleRightsBlackQueen
+		case '-':
+			castleRights = 0
+			break
+		default:
+			fmt.Printf("Invalid castling fen: %s\n", castling)
+		}
+	}
+	p.SetCastleRights(castleRights)
+}
+func (p *Position) readFenEnpassant(enpassant string) {
+	switch enpassant {
+	case "-":
+		p.ClearEnPassant()
+	default:
+		if rank, file, ok := NtoRF(enpassant); ok {
+			p.SetEnPassant(rank, file)
+		} else {
+			fmt.Printf("Invalid enPassant fen: %s\n", enpassant)
+		}
+	}
+}
+func (p *Position) readFenHalfMove(halfMove string) {
+	halfMoveCount := 0
+	if _, err := fmt.Sscanf(halfMove, "%d", &halfMoveCount); err != nil {
+		fmt.Printf("Invalid halfmove fen: %s\n", halfMove)
+	}
+	p.halfMoves = make([]uint64, halfMoveCount)
+}
+func (p *Position) readFenFullMove(fullMove string) {
+	fullMoveCount := 0
+	if _, err := fmt.Sscanf(fullMove, "%d", &fullMoveCount); err != nil {
+		fmt.Printf("Invalid fullmove fen: %s\n", fullMove)
+	}
+	p.fullMoves = fullMoveCount
+}
+
+func (p *Position) GenerateFen() string {
+	count := 0
+	sb := &strings.Builder{}
+	for rank := uint8(1); rank <= 8; rank++ {
+		for file := uint8(1); file <= 8; file++ {
+			bit := RFtoB(rank, file)
+			if pieceType, ok := p.findPiece(bit); ok {
+				p.writeFenEntry(sb, &count, &pieceType)
+			} else {
+				count++
+			}
+		}
+		if count != 0 {
+			p.writeFenEntry(sb, &count, nil)
+		}
+		if rank < 8 {
+			sb.WriteByte('/')
+		}
+	}
+	p.writeFenTurn(sb)
+	p.writeFenCastling(sb)
+	p.writeFenEnpassant(sb)
+	p.writeFenHalfMove(sb)
+	p.writeFenFullMove(sb)
+	return sb.String()
+}
+func (p *Position) writeFenEntry(sb *strings.Builder, count *int, pieceType *uint8) {
+	if *count > 0 {
+		sb.WriteByte(byte(*count + '0'))
+	}
+	if pieceType != nil {
+		sb.WriteByte(fen[*pieceType])
+	}
+	*count = 0
+}
+func (p *Position) writeFenTurn(sb *strings.Builder) {
+	if p.Turn() == PlayerWhite {
+		sb.WriteString(" w")
+	} else {
+		sb.WriteString(" b")
+	}
+}
+func (p *Position) writeFenCastling(sb *strings.Builder) {
+	sb.WriteByte(' ')
+	castlingRights := p.CastleRights()
+	if castlingRights == 0 {
+		sb.WriteByte('-')
+		return
+	}
+	if castlingRights&CastleRightsWhiteKing > 0 {
+		sb.WriteByte('K')
+	}
+	if castlingRights&CastleRightsWhiteQueen > 0 {
+		sb.WriteByte('Q')
+	}
+	if castlingRights&CastleRightsBlackKing > 0 {
+		sb.WriteByte('k')
+	}
+	if castlingRights&CastleRightsBlackQueen > 0 {
+		sb.WriteByte('q')
+	}
+}
+func (p *Position) writeFenEnpassant(sb *strings.Builder) {
+	ep := p.EnPassant()
+	if ep == 0 {
+		sb.WriteString(" -")
+	} else {
+		//notation := string([]byte{'a' + 8 - ep})
+		//if p.Turn() == PlayerWhite {
+		//	notation += "6"
+		//} else {
+		//	notation += "3"
+		//}
+		//sb.WriteString(" " + notation)
+	}
+}
+func (p *Position) writeFenHalfMove(sb *strings.Builder) {
+	sb.WriteByte(' ')
+	sb.WriteString(fmt.Sprintf("%d", len(p.halfMoves)))
+}
+func (p *Position) writeFenFullMove(sb *strings.Builder) {
+	sb.WriteByte(' ')
+	sb.WriteString(fmt.Sprintf("%d", p.fullMoves))
+}
+
+func (p *Position) debugPrintBoard() {
+	for rank := uint8(8); rank >= 1; rank-- {
+		fmt.Printf("%d  ", rank)
+		for file := uint8(1); file <= 8; file++ {
+			str := ". "
+			bit := uint64(1 << RFtoB(rank, file))
+			for b := BitPawns; b <= BitKings; b++ {
+				if p.bitboards[b]&bit != 0 {
+					pieceType := (b - 2) << 1
+					if p.bitboards[BitBlack]&bit != 0 {
+						pieceType |= PlayerBlack
+					}
+					str = fmt.Sprintf("%s ", string([]byte{fen[pieceType]}))
+					break
+				}
+			}
+			fmt.Print(str)
+		}
+		fmt.Println()
+	}
+	fmt.Print("\n   a b c d e f g h\n")
+}
+func debugPrintBitBoard(bitboard uint64, b uint8) {
+	fmt.Printf("Bit Index: %d\n", b)
+	for rank := uint8(8); rank >= 1; rank-- {
+		fmt.Printf("%d  ", rank)
+		for file := uint8(1); file <= 8; file++ {
+			bit := RFtoB(rank, file)
+			str := ". "
+			if bit == b {
+				str = "X "
+			}
+			if bitboard&(1<<bit) != 0 {
+				str = "1 "
+				if bit == b {
+					str = "@ "
+				}
+
+			}
+			fmt.Print(str)
+		}
+		fmt.Println()
+	}
+	fmt.Print("\n   a b c d e f g h\n")
+}
+
+func init() {
+	// Key generation
+	//bs := make([]byte, 8)
+	//for i := range keys {
+	//	n, err := rand.Read(bs)
+	//	if err != nil || n != 8 {
+	//		panic("Random key generation failed")
+	//	}
+	//	keys[i] = binary.BigEndian.Uint64(bs)
+	//}
+	generateKnightMoves()
+	generateKingMoves()
+	generatePawnMoves()
+}
+
+func generateKnightMoves() {
+	for rank := uint8(1); rank <= 8; rank++ {
+		for file := uint8(1); file <= 8; file++ {
+			bit := RFtoB(rank, file)
+			if rank < 7 && file > 1 {
+				knightMoves[bit] |= 1 << (bit + 17) //nnw
+			}
+			if rank < 7 && file < 8 {
+				knightMoves[bit] |= 1 << (bit + 15) //nne
+			}
+			if rank < 8 && file > 2 {
+				knightMoves[bit] |= 1 << (bit + 10) //wnw
+			}
+			if rank < 8 && file < 7 {
+				knightMoves[bit] |= 1 << (bit + 6) //ene
+			}
+			if rank > 1 && file > 2 {
+				knightMoves[bit] |= 1 << (bit - 6) //ese
+			}
+			if rank > 1 && file < 7 {
+				knightMoves[bit] |= 1 << (bit - 10) // wsw
+			}
+			if rank > 2 && file > 1 {
+				knightMoves[bit] |= 1 << (bit - 15) // sse
+			}
+			if rank > 2 && file < 8 {
+				knightMoves[bit] |= 1 << (bit - 17) // ssw
+			}
+			//debugPrintBitBoard(knightMoves[bit], bit)
+			//fmt.Println("********************************************")
+		}
+	}
+}
+func generateKingMoves() {
+	for rank := uint8(1); rank <= 8; rank++ {
+		for file := uint8(1); file <= 8; file++ {
+			bit := RFtoB(rank, file)
+			if rank < 8 && file > 1 {
+				kingMoves[bit] |= 1 << (bit + 9) //nnw
+			}
+			if rank < 8 {
+				kingMoves[bit] |= 1 << (bit + 8) //nnw
+			}
+			if rank < 8 && file < 8 {
+				kingMoves[bit] |= 1 << (bit + 7) //nnw
+			}
+
+			if file > 1 {
+				kingMoves[bit] |= 1 << (bit + 1) //nnw
+			}
+			if file < 8 {
+				kingMoves[bit] |= 1 << (bit - 1) //nnw
+			}
+
+			if rank > 1 && file > 1 {
+				kingMoves[bit] |= 1 << (bit - 7) //nnw
+			}
+			if rank > 1 {
+				kingMoves[bit] |= 1 << (bit - 8) //nnw
+			}
+			if rank > 1 && file < 8 {
+				kingMoves[bit] |= 1 << (bit - 9) //nnw
+			}
+			//debugPrintBitBoard(kingMoves[bit], bit)
+			//fmt.Println("********************************************")
+		}
+	}
+}
+func generatePawnMoves() {
+	for rank := uint8(2); rank <= 7; rank++ {
+		for file := uint8(1); file <= 8; file++ {
+			bit := RFtoB(rank, file)
+			if file > 1 {
+				whitePawnMoves[bit] |= 1 << (bit + 9) //nnw
+			}
+			if file < 8 {
+				whitePawnMoves[bit] |= 1 << (bit + 7) //nnw
+			}
+			if file > 1 {
+				blackPawnMoves[bit] |= 1 << (bit - 7) //nnw
+			}
+			if file < 8 {
+				blackPawnMoves[bit] |= 1 << (bit - 9) //nnw
+			}
+			//debugPrintBitBoard(whitePawnMoves[bit], bit)
+			//fmt.Println("********************************************")
+		}
+	}
+}
+
+//func(p *Position) Hash() uint64 {
+//	var hash uint64
+//	for i := range p.bitboards {
+//		board := p.bitboards[i]
+//		index := 0
+//		for board != 0 {
+//			if board&1 != 0 {
+//				hash ^= keys[index]
+//			}
+//			board >>= 1
+//			index++
+//		}
+//	}
+//	return hash
+//}

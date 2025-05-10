@@ -1,128 +1,45 @@
 package game
 
 import (
-	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"us.figge.chess/internal/board"
-	"us.figge.chess/internal/common"
+	"us.figge.chess/internal/engine"
+)
+
+const (
+	FontHeight = 16
+	SquareSize = 71
 )
 
 type Game struct {
-	*ColorScheme
-	entities       map[uint8]common.Piece
-	board          *board.Board
-	squareSize     int
-	sheetImageSize int
-
-	highlightAttacks bool
-	showStrength     bool
-	showFPS          bool
-	showLabels       bool
-	fontHeight       int
-	boardWidth       int
-	boardHeight      int
-	targetWidth      int
-	targetHeight     int
-	debugEnabled     bool
-	debugY           int
-	debugX           [8]int
+	board  *board.Board
+	engine *engine.Engine
 }
 
-func NewGame(options ...Options) *Game {
-	game := &Game{
-		ColorScheme:      newColorScheme(),
-		squareSize:       64,
-		boardWidth:       512,
-		boardHeight:      512,
-		targetWidth:      512,
-		targetHeight:     512,
-		debugEnabled:     false,
-		highlightAttacks: false,
-		showStrength:     false,
-		showFPS:          false,
-		fontHeight:       16,
+func NewGame() *Game {
+	eng := engine.NewEngine()
+	g := &Game{
+		board: board.NewBoard(eng,
+			board.OptSquareSize(SquareSize),
+			board.OptFontHeight(FontHeight),
+			board.OptWhiteRGB(0xf1, 0xd9, 0xc0),
+			board.OptBlackRGB(0xa9, 0x7a, 0x65),
+		),
 	}
-	for _, option := range options {
-		option(game)
-	}
-	game.entities = initialize(game)
-	game.board = board.NewBoard(
-		game,
-		//board.OptSetup("rn1qkbnr/pppp1ppp/b2Qp3/8/2P5/8/PP1PPPPP/RNB1KBNR b Qq c4"),
-		//board.OptSetup("r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1"),
-		board.OptSetup("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"),
-		//board.OptSetup("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"),
-	)
-	for i := 0; i < 8; i++ {
-		game.debugX[i] = game.squareSize*i + 2
-	}
-	game.debugY = game.squareSize * 8
-	game.boardWidth = game.squareSize * 8
-	game.boardHeight = game.squareSize * 8
-	if game.debugEnabled {
-		game.boardHeight += game.fontHeight
-	}
-	if game.showStrength {
-		game.boardWidth += game.fontHeight
-	}
-	game.targetWidth = game.boardWidth
-	game.targetHeight = game.boardHeight
-	ebiten.SetWindowSize(game.boardWidth, game.boardHeight)
 
-	return game
+	g.board.Setup("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq _ 0 1")
+	return g
 }
 
 func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyQ) {
 		return ebiten.Termination
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyD) {
-		g.debugEnabled = !g.debugEnabled
-		if g.debugEnabled {
-			g.targetHeight = g.squareSize*8 + g.fontHeight
-		} else {
-			g.targetHeight = g.squareSize * 8
-		}
-		ebiten.SetWindowSize(g.boardWidth, g.boardHeight)
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyS) {
-		g.showStrength = !g.showStrength
-		if g.showStrength {
-			g.targetWidth = g.squareSize*8 + g.fontHeight
-		} else {
-			g.targetWidth = g.squareSize * 8
-		}
-		ebiten.SetWindowSize(g.boardWidth, g.boardHeight)
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyA) {
-		g.highlightAttacks = !g.highlightAttacks
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyF) {
-		g.showFPS = !g.showFPS
-	} else if inpututil.IsKeyJustPressed(ebiten.KeyL) {
-		g.showLabels = !g.showLabels
 	}
-	if g.targetHeight > g.boardHeight {
-		g.boardHeight++
-		ebiten.SetWindowSize(g.boardWidth, g.boardHeight)
-	} else if g.targetHeight < g.boardHeight {
-		g.boardHeight--
-		ebiten.SetWindowSize(g.boardWidth, g.boardHeight)
-	}
-	if g.targetWidth > g.boardWidth {
-		g.boardWidth++
-		ebiten.SetWindowSize(g.boardWidth, g.boardHeight)
-	} else if g.targetWidth < g.boardWidth {
-		g.boardWidth--
-		ebiten.SetWindowSize(g.boardWidth, g.boardHeight)
-	}
-	g.board.Update()
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	g.board.Draw(screen)
-	if g.EnableDebug() && g.showFPS {
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("FPS: %0.2f", ebiten.ActualFPS()), g.DebugX(7), g.debugY)
-	}
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
