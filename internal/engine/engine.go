@@ -1,5 +1,9 @@
 package engine
 
+import (
+	. "us.figge.chess/internal/common"
+)
+
 type Engine struct {
 	position *Position
 }
@@ -11,7 +15,7 @@ func NewEngine() *Engine {
 	return e
 }
 
-func (e *Engine) Setup(fen string) {
+func (e *Engine) SetFEN(fen string) {
 	e.position.SetupBoard(fen)
 }
 
@@ -21,4 +25,8 @@ func (e *Engine) GetBoards() []uint64 {
 		boards[i] = e.position.bitboards[i]
 	}
 	return boards
+}
+
+func (e *Engine) GetPieceType(rank, file uint8) (uint8, bool) {
+	return e.position.findPiece(RFtoB(rank, file))
 }

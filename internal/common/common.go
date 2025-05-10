@@ -62,3 +62,16 @@ func NtoRF(n string) (uint8, uint8, bool) {
 	}
 	return rank, file, true
 }
+
+func XYtoRF(x, y, squareSize int) (uint8, uint8, bool) {
+	rank := uint8(8 - (y-2)/squareSize)
+	file := uint8((x-1)/squareSize + 1)
+	if x < 1 || y < 3 || rank > 8 || file > 8 {
+		return 0, 0, false
+	}
+	return rank, file, true
+}
+
+func RFtoXY(rank, file uint8, squareSize int) (float32, float32) {
+	return float32(int(file-1) * squareSize), float32(int(8-rank) * squareSize)
+}

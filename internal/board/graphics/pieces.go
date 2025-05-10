@@ -7,10 +7,6 @@ import (
 	. "us.figge.chess/internal/common"
 )
 
-type Pieces struct {
-	pieces map[uint8]*Piece
-}
-
 type Piece struct {
 	img       *ebiten.Image
 	pieceType uint8
@@ -28,6 +24,7 @@ var (
 		PieceQueen:  0b00010000,
 		PieceKing:   0b00000000,
 	}
+	pieces map[uint8]*Piece
 )
 
 var (
@@ -50,27 +47,25 @@ func mustLoadImage(name string) *ebiten.Image {
 	return ebiten.NewImageFromImage(img)
 }
 
-func NewPieces(squareSize int) *Pieces {
+func InitPieces(squareSize int) {
 	sheetSize := sheet.Bounds().Size()
 	scaleX := float64(squareSize) / float64(sheetSize.X/6)
 	scaleY := float64(squareSize) / float64(sheetSize.Y/2)
 	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
 	op.GeoM.Scale(scaleX, scaleY)
-	pcs := Pieces{
-		pieces: make(map[uint8]*Piece),
-	}
+	pieces = make(map[uint8]*Piece)
+
 	for pieceType, location := range imageMap {
 		for colorType := PlayerWhite; colorType <= PlayerBlack; colorType++ {
-			pcs.pieces[pieceType|colorType] = makeEntity(op, squareSize, sheetSize, location|pieceType|colorType)
+			pieces[pieceType|colorType] = makeEntity(op, squareSize, sheetSize, location|pieceType|colorType)
 		}
 	}
-	return &pcs
 }
 
 func makeEntity(op *ebiten.DrawImageOptions, squareSize int, sheetSize image.Point, data uint8) *Piece {
 	p := &Piece{
 		img:       ebiten.NewImage(squareSize, squareSize),
-		pieceType: data & PieceMask,
+		pieceType: (data & PieceMask) >> 1,
 		colorType: data & PlayerMask,
 	}
 	x := int(data >> 4)
@@ -81,8 +76,8 @@ func makeEntity(op *ebiten.DrawImageOptions, squareSize int, sheetSize image.Poi
 	return p
 }
 
-func (p *Pieces) Piece(pieceType uint8) *Piece {
-	return p.pieces[pieceType]
+func GetPiece(pieceType uint8) *Piece {
+	return pieces[pieceType]
 }
 
 func (p *Piece) Draw(dst *ebiten.Image, op *ebiten.DrawImageOptions) {

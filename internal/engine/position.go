@@ -128,9 +128,9 @@ func (p *Position) ClearSquare(rank, file uint8) {
 		p.bitboards[board] &= ^(uint64(1) << bit)
 	}
 }
-func (p *Position) findPiece(index uint8) (uint8, bool) {
-	bit := uint64(1 << index)
-	for b := BitPawns; b < BitKings; b++ {
+func (p *Position) findPiece(bitIndex uint8) (uint8, bool) {
+	bit := uint64(1 << bitIndex)
+	for b := BitPawns; b <= BitKings; b++ {
 		if p.bitboards[b]&bit != 0 {
 			pieceType := (b - 2) << 1
 			if p.bitboards[BitBlack]&bit != 0 {
@@ -249,8 +249,8 @@ func (p *Position) GenerateFen() string {
 	sb := &strings.Builder{}
 	for rank := uint8(1); rank <= 8; rank++ {
 		for file := uint8(1); file <= 8; file++ {
-			bit := RFtoB(rank, file)
-			if pieceType, ok := p.findPiece(bit); ok {
+			bitIndex := RFtoB(rank, file)
+			if pieceType, ok := p.findPiece(bitIndex); ok {
 				p.writeFenEntry(sb, &count, &pieceType)
 			} else {
 				count++

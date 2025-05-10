@@ -4,15 +4,15 @@ import "image/color"
 
 type Option func(b *Board)
 
-func OptSquareSize(size int) Option {
+func OptDebugEnabled(enabled bool) Option {
 	return func(b *Board) {
-		b.squareSize = size
+		b.debugEnabled = enabled
 	}
 }
 
-func OptFontHeight(height int) Option {
-	return func(d *Board) {
-		d.fontHeight = height
+func OptSquareSize(size int) Option {
+	return func(b *Board) {
+		b.squareSize = size
 	}
 }
 

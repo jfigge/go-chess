@@ -7,7 +7,6 @@ import (
 )
 
 const (
-	FontHeight = 16
 	SquareSize = 71
 )
 
@@ -21,13 +20,12 @@ func NewGame() *Game {
 	g := &Game{
 		board: board.NewBoard(eng,
 			board.OptSquareSize(SquareSize),
-			board.OptFontHeight(FontHeight),
+			board.OptDebugEnabled(true),
 			board.OptWhiteRGB(0xf1, 0xd9, 0xc0),
 			board.OptBlackRGB(0xa9, 0x7a, 0x65),
 		),
 	}
-
-	g.board.Setup("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq _ 0 1")
+	g.board.Setup("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
 	return g
 }
 
@@ -35,7 +33,7 @@ func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyQ) {
 		return ebiten.Termination
 	}
-	return nil
+	return g.board.Update()
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
