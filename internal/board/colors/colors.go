@@ -9,6 +9,7 @@ type Colors struct {
 	valid       color.Color
 	invalid     color.Color
 	highlight   color.Color
+	dragStart   color.Color
 }
 
 func NewColors() *Colors {
@@ -16,9 +17,11 @@ func NewColors() *Colors {
 		black:       &color.RGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xff},
 		playerWhite: &color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
 		playerBlack: &color.RGBA{R: 0x88, G: 0x88, B: 0x88, A: 0xff},
-		valid:       &color.RGBA{R: 0x44, G: 0xff, B: 0x44, A: 0xff},
-		invalid:     &color.RGBA{R: 0xff, G: 0x44, B: 0x44, A: 0xff},
-		highlight:   &color.RGBA{R: 0x88, G: 0x22, B: 0x22, A: 0xff},
+		//valid:       &color.RGBA{R: 0x44, G: 0xff, B: 0x44, A: 0xff},
+		valid:     &color.RGBA{R: 0xcc, G: 0x88, B: 0x88, A: 0xff},
+		invalid:   &color.RGBA{R: 0xff, G: 0x44, B: 0x44, A: 0xff},
+		highlight: &color.RGBA{R: 0x88, G: 0x22, B: 0x22, A: 0xff},
+		dragStart: &color.RGBA{R: 0xff, G: 0xff, B: 0x9f, A: 0xff},
 	}
 }
 
@@ -46,6 +49,9 @@ func (c *Colors) Background() color.Color {
 func (c *Colors) Foreground() color.Color {
 	return &color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
 }
+func (c *Colors) DragStart() color.Color {
+	return c.dragStart
+}
 func (c *Colors) SetPlayerWhite(newColor *color.RGBA) {
 	c.playerWhite = newColor
 }
@@ -60,4 +66,7 @@ func (c *Colors) SetInvalid(newColor *color.RGBA) {
 }
 func (c *Colors) SetHighlight(newColor *color.RGBA) {
 	c.highlight = newColor
+}
+func (c *Colors) SetDragStart(newColor *color.RGBA) {
+	c.dragStart = newColor
 }

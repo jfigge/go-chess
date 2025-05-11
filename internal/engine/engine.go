@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	. "us.figge.chess/internal/common"
 )
 
@@ -28,9 +29,10 @@ func (e *Engine) GetBoards() []uint64 {
 }
 
 func (e *Engine) GetPieceType(rank, file uint8) (uint8, bool) {
-	return e.position.findPiece(RFtoB(rank, file))
+	return e.position.identifyPiece(RFtoB(rank, file))
 }
 
 func (e *Engine) MovePiece(from, to, pieceType uint8) {
 	e.position.MovePiece(from, to, pieceType)
+	fmt.Printf("Move: %s\n", RFtoN(ItoRF(to)))
 }

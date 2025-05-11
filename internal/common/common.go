@@ -1,6 +1,8 @@
 package common
 
-import "math"
+import (
+	"math"
+)
 
 const (
 	notation = "abcdefgh"
@@ -32,6 +34,19 @@ const (
 	CastleRightsBlackQueen uint8 = 0b00010000
 )
 
+// Bit Boards
+const (
+	BitWhite     uint8 = 0b00000000 // 0
+	BitBlack     uint8 = 0b00000001 // 1
+	BitPawns     uint8 = 0b00000010 // 2  0
+	BitKnights   uint8 = 0b00000011 // 3  1
+	BitBishops   uint8 = 0b00000100 // 4  2
+	BitRooks     uint8 = 0b00000101 // 5  3
+	BitQueens    uint8 = 0b00000110 // 6  4
+	BitKings     uint8 = 0b00000111 // 7  5
+	BitEnPassant uint8 = 0b00001000 // 8  6
+)
+
 // RFtoI Rank and File to Index
 func RFtoI(rank, file uint8) uint8 {
 	return (8-rank)*8 + file - 1
@@ -42,26 +57,29 @@ func ItoRF(index uint8) (uint8, uint8) {
 	return 8 - index/8, index%8 + 1
 }
 
-// RFtoB Rank and File to bitboard bit index
-func RFtoB(rank, file uint8) uint8 {
-	return (rank-1)*8 + 8 - file
+// RFtoB Rank and File to bitboard bit
+func RFtoB(rank, file uint8) uint64 {
+	return ItoB(RFtoI(rank, file))
 }
 
+// ItoB Index to bitboard bit
 func ItoB(index uint8) uint64 {
 	return 1 << (63 - index)
 }
 
-// BtoI Bitboard bit index to Index
+// BtoI Bitboard bit to Index
 func BtoI(bit uint64) uint8 {
-	x := float64(bit)
-	y := math.Log(x) / math.Log(2)
-	return 63 - uint8(y)
-
+	return 63 - uint8(math.Log(float64(bit))/math.Log(2))
 }
 
 // BtoRF Bitboard bit index to Rank and File
-func BtoRF(index uint8) (uint8, uint8) {
-	return index/8 + 1, 8 - index%8
+func BtoRF(bit uint64) (uint8, uint8) {
+	return ItoRF(BtoI(bit))
+}
+
+// PTtoBB PieceType to piece and player Bitboards
+func PTtoBB(pieceType uint8) (uint8, uint8) {
+	return pieceType&PieceMask>>1 + 2, pieceType & PlayerMask
 }
 
 // NtoRF Notation to Rank and File
@@ -76,16 +94,19 @@ func NtoRF(n string) (uint8, uint8, bool) {
 	}
 	return rank, file, true
 }
+func RFtoN(rank, file uint8) string {
+	return string(notation[file-1]) + string(rank+'0')
+}
 
 func XYtoRF(x, y, squareSize int) (uint8, uint8, bool) {
-	rank := uint8(8 - (y-2)/squareSize)
-	file := uint8((x-1)/squareSize + 1)
+	rank := uint8(8 - (y)/squareSize)
+	file := uint8((x)/squareSize + 1)
 	if x < 1 || y < 3 || rank < 1 || rank > 8 || file < 1 || file > 8 {
 		return 0, 0, false
 	}
 	return rank, file, true
 }
 
-func RFtoXY(rank, file uint8, squareSize int) (float32, float32) {
-	return float32(int(file-1) * squareSize), float32(int(8-rank) * squareSize)
+func RFtoXY(rank, file uint8, squareSize int) (int, int) {
+	return int(file-1) * squareSize, int(8-rank) * squareSize
 }

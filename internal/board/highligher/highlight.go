@@ -25,13 +25,14 @@ type Highlight struct {
 	cursorY     int
 	cursorRank  uint8
 	cursorFile  uint8
-	highlightX  float32
-	highlightY  float32
+	highlightX  int
+	highlightY  int
 	piece       *graphics.Piece
 }
 
 func NewHighlight(highlighter Highlighter, squareSize int, background color.Color) *Highlight {
 	h := &Highlight{
+		visible:     false,
 		index:       0xff,
 		highlighter: highlighter,
 		squareSize:  squareSize,
@@ -70,9 +71,12 @@ func (h *Highlight) Update(x, y int) bool {
 	return true
 }
 
+func (h *Highlight) Hide() {
+	h.visible = false
+}
 func (h *Highlight) Draw(dst *ebiten.Image) {
 	if h.visible {
-		vector.DrawFilledRect(dst, h.highlightX, h.highlightY, float32(h.squareSize), float32(h.squareSize), h.background, false)
+		vector.DrawFilledRect(dst, float32(h.highlightX), float32(h.highlightY), float32(h.squareSize), float32(h.squareSize), h.background, false)
 	}
 }
 

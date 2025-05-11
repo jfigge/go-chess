@@ -6,19 +6,6 @@ import (
 	. "us.figge.chess/internal/common"
 )
 
-// Bit Boards
-const (
-	BitWhite     uint8 = 0b00000000
-	BitBlack     uint8 = 0b00000001
-	BitPawns     uint8 = 0b00000010
-	BitKnights   uint8 = 0b00000011
-	BitBishops   uint8 = 0b00000100
-	BitRooks     uint8 = 0b00000101
-	BitQueens    uint8 = 0b00000110
-	BitKings     uint8 = 0b00000111
-	BitEnPassant uint8 = 0b00001000
-)
-
 var (
 	//hashKey        string
 	//keys           [576]uint64
@@ -39,21 +26,6 @@ var (
 		'r': PlayerBlack | PieceRook,
 		'q': PlayerBlack | PieceQueen,
 		'k': PlayerBlack | PieceKing,
-	}
-
-	pieceToBitBoard = map[uint8]uint8{
-		PlayerWhite | PiecePawn:   BitPawns,
-		PlayerWhite | PieceKnight: BitKnights,
-		PlayerWhite | PieceBishop: BitBishops,
-		PlayerWhite | PieceRook:   BitRooks,
-		PlayerWhite | PieceQueen:  BitQueens,
-		PlayerWhite | PieceKing:   BitKings,
-		PlayerBlack | PiecePawn:   BitPawns,
-		PlayerBlack | PieceKnight: BitKnights,
-		PlayerBlack | PieceBishop: BitBishops,
-		PlayerBlack | PieceRook:   BitRooks,
-		PlayerBlack | PieceQueen:  BitQueens,
-		PlayerBlack | PieceKing:   BitKings,
 	}
 )
 
@@ -105,43 +77,46 @@ func (p *Position) SetCastleRights(castleRights uint8) {
 }
 func (p *Position) SetEnPassant(rank, file uint8) {
 	bit := RFtoB(rank, file)
-	p.bitboards[BitEnPassant] = uint64(1) << bit
+	p.bitboards[BitEnPassant] = bit
 }
 func (p *Position) ClearEnPassant() {
 	p.bitboards[BitEnPassant] = 0
 }
-func (p *Position) SetPiece(pieceType uint8, rank, file uint8) {
+func (p *Position) SetPiece(pieceType uint8, rank, file uint8) bool {
 	bit := RFtoB(rank, file)
-	pieceBoard := pieceToBitBoard[pieceType]
-	p.bitboards[pieceType&PlayerMask] |= uint64(1) << bit
-	p.bitboards[pieceBoard] |= uint64(1) << bit
+	pb, cb := PTtoBB(pieceType)
+	if p.bitboards[pb]&bit != 0 || p.bitboards[cb]&bit != 0 {
+		return false
+	}
+	p.bitboards[pb] |= bit
+	p.bitboards[cb] |= bit
+	return true
 }
 func (p *Position) RemovePiece(pieceType uint8, rank, file uint8) {
-	bit := RFtoB(rank, file)
-	pieceBoard := pieceToBitBoard[pieceType]
-	p.bitboards[pieceType&PlayerMask] &= ^(uint64(1) << bit)
-	p.bitboards[pieceBoard] &= ^(uint64(1) << bit)
+	notBit := ^RFtoB(rank, file)
+	pb, cb := PTtoBB(pieceType)
+	p.bitboards[pb] &= notBit
+	p.bitboards[cb] &= notBit
 }
-func (p *Position) MovePiece(fromIndex, toIndex, pieceType uint8) {
-	bitIndex := ItoB(fromIndex)
-	bitBord := pieceToBitBoard[pieceType]
-	bit := uint64(1 << bitIndex)
-	if p.bitboards[bitBord]&bit != 0 {
-
+func (p *Position) MovePiece(fromIndex, toIndex, pieceType uint8) bool {
+	rank, file := ItoRF(toIndex)
+	if !p.SetPiece(pieceType, rank, file) {
+		return false
 	}
+	rank, file = ItoRF(fromIndex)
+	p.RemovePiece(pieceType, rank, file)
+	return true
 }
-
 func (p *Position) ClearSquare(rank, file uint8) {
-	bit := RFtoB(rank, file)
-	for board := BitWhite; board < BitKings; board++ {
-		p.bitboards[board] &= ^(uint64(1) << bit)
+	notBit := ^RFtoB(rank, file)
+	for bb := BitWhite; bb <= BitKings; bb++ {
+		p.bitboards[bb] &= notBit
 	}
 }
-func (p *Position) findPiece(bitIndex uint8) (uint8, bool) {
-	bit := uint64(1 << bitIndex)
-	for b := BitPawns; b <= BitKings; b++ {
-		if p.bitboards[b]&bit != 0 {
-			pieceType := (b - 2) << 1
+func (p *Position) identifyPiece(bit uint64) (uint8, bool) {
+	for bb := BitPawns; bb <= BitKings; bb++ {
+		if p.bitboards[bb]&bit != 0 {
+			pieceType := (bb - 2) << 1
 			if p.bitboards[BitBlack]&bit != 0 {
 				pieceType |= PlayerBlack
 			}
@@ -154,7 +129,7 @@ func (p *Position) findPiece(bitIndex uint8) (uint8, bool) {
 func (p *Position) SetupBoard(fen string) {
 	fen = strings.TrimSpace(fen)
 	if fen == "" {
-		fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq _ 0 1"
+		fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 	}
 	p.fullMoves = 0
 	p.halfMoves = make([]uint64, 0)
@@ -258,8 +233,8 @@ func (p *Position) GenerateFen() string {
 	sb := &strings.Builder{}
 	for rank := uint8(1); rank <= 8; rank++ {
 		for file := uint8(1); file <= 8; file++ {
-			bitIndex := RFtoB(rank, file)
-			if pieceType, ok := p.findPiece(bitIndex); ok {
+			bit := RFtoB(rank, file)
+			if pieceType, ok := p.identifyPiece(bit); ok {
 				p.writeFenEntry(sb, &count, &pieceType)
 			} else {
 				count++
@@ -320,13 +295,8 @@ func (p *Position) writeFenEnpassant(sb *strings.Builder) {
 	if ep == 0 {
 		sb.WriteString(" -")
 	} else {
-		//notation := string([]byte{'a' + 8 - ep})
-		//if p.Turn() == PlayerWhite {
-		//	notation += "6"
-		//} else {
-		//	notation += "3"
-		//}
-		//sb.WriteString(" " + notation)
+		n := RFtoN(BtoRF(p.EnPassant()))
+		sb.WriteString(" " + n)
 	}
 }
 func (p *Position) writeFenHalfMove(sb *strings.Builder) {
@@ -343,10 +313,10 @@ func (p *Position) debugPrintBoard() {
 		fmt.Printf("%d  ", rank)
 		for file := uint8(1); file <= 8; file++ {
 			str := ". "
-			bit := uint64(1 << RFtoB(rank, file))
-			for b := BitPawns; b <= BitKings; b++ {
-				if p.bitboards[b]&bit != 0 {
-					pieceType := (b - 2) << 1
+			bit := RFtoB(rank, file)
+			for bb := BitPawns; bb <= BitKings; bb++ {
+				if p.bitboards[bb]&bit != 0 {
+					pieceType := (bb - 2) << 1
 					if p.bitboards[BitBlack]&bit != 0 {
 						pieceType |= PlayerBlack
 					}
@@ -360,7 +330,7 @@ func (p *Position) debugPrintBoard() {
 	}
 	fmt.Print("\n   a b c d e f g h\n")
 }
-func debugPrintBitBoard(bitboard uint64, b uint8) {
+func debugPrintBitBoard(bitboard uint64, b uint64) {
 	fmt.Printf("Bit Index: %d\n", b)
 	for rank := uint8(8); rank >= 1; rank-- {
 		fmt.Printf("%d  ", rank)
@@ -370,7 +340,7 @@ func debugPrintBitBoard(bitboard uint64, b uint8) {
 			if bit == b {
 				str = "X "
 			}
-			if bitboard&(1<<bit) != 0 {
+			if bitboard&bit != 0 {
 				str = "1 "
 				if bit == b {
 					str = "@ "
@@ -402,7 +372,7 @@ func init() {
 func generateKnightMoves() {
 	for rank := uint8(1); rank <= 8; rank++ {
 		for file := uint8(1); file <= 8; file++ {
-			bit := RFtoB(rank, file)
+			bit := 63 - RFtoI(rank, file)
 			if rank < 7 && file > 1 {
 				knightMoves[bit] |= 1 << (bit + 17) //nnw
 			}
@@ -435,7 +405,7 @@ func generateKnightMoves() {
 func generateKingMoves() {
 	for rank := uint8(1); rank <= 8; rank++ {
 		for file := uint8(1); file <= 8; file++ {
-			bit := RFtoB(rank, file)
+			bit := 63 - RFtoI(rank, file)
 			if rank < 8 && file > 1 {
 				kingMoves[bit] |= 1 << (bit + 9) //nnw
 			}
@@ -470,7 +440,7 @@ func generateKingMoves() {
 func generatePawnMoves() {
 	for rank := uint8(2); rank <= 7; rank++ {
 		for file := uint8(1); file <= 8; file++ {
-			bit := RFtoB(rank, file)
+			bit := 63 - RFtoI(rank, file)
 			if file > 1 {
 				whitePawnMoves[bit] |= 1 << (bit + 9) //nnw
 			}
@@ -483,7 +453,7 @@ func generatePawnMoves() {
 			if file < 8 {
 				blackPawnMoves[bit] |= 1 << (bit - 9) //nnw
 			}
-			//debugPrintBitBoard(whitePawnMoves[bit], bit)
+			//debugPrintBitBoard(whitePawnMoves[bit], uint64(1<<bit))
 			//fmt.Println("********************************************")
 		}
 	}

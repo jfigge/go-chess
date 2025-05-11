@@ -19,8 +19,11 @@ const (
 )
 
 type Board struct {
-	colors        *colors.Colors
-	engine        *engine.Engine
+	colors     *colors.Colors
+	engine     *engine.Engine
+	squareSize int
+
+	// Graphics elements
 	canvas        *ebiten.Image
 	background    *ebiten.Image
 	highlights    *ebiten.Image
@@ -32,18 +35,19 @@ type Board struct {
 	labelingXOp   *ebiten.DrawImageOptions
 	labelFontSize float64
 
-	lastCursorX int
-	lastCursorY int
-
+	// Highlighting
 	redraw      bool
+	regenerate  bool
 	rehighlight bool
 	selector    *highligher.DragAndDrop
+	dragStart   *highligher.Highlight
 
+	// Debugging
 	debugEnabled bool
+	lastCursorX  int
+	lastCursorY  int
 	debugY       int
 	debugX       [8]int
-
-	squareSize int
 }
 
 func NewBoard(engine *engine.Engine, options ...Option) *Board {
@@ -74,12 +78,12 @@ func (b *Board) Initialize() {
 	b.labelingXOp.GeoM.Translate(0, float64(b.squareSize*8)-h)
 	b.labelingY = ebiten.NewImage(int(w), b.squareSize*8)
 	b.selector = highligher.NewDragAndDrop(b, b.squareSize, b.colors.Valid(), b.colors.Highlight())
+	b.dragStart = highligher.NewHighlight(b, b.squareSize, b.colors.DragStart())
 
 	for i := range 8 {
 		b.debugY = b.squareSize*8 + 1
 		b.debugX[i] = b.squareSize*i + 1
 	}
-
 	height := b.squareSize * 8
 	if b.debugEnabled {
 		height += debugHeight + 2
@@ -90,7 +94,8 @@ func (b *Board) Initialize() {
 }
 
 func (b *Board) Update() error {
-	b.lastCursorX, b.lastCursorY = ebiten.CursorPosition()
+	x, y := ebiten.CursorPosition()
+	b.lastCursorX, b.lastCursorY = x-1, y-2
 	b.rehighlight = b.rehighlight || b.selector.Update(b.lastCursorX, b.lastCursorY)
 	return nil
 }
@@ -110,6 +115,7 @@ func (b *Board) Draw(screen *ebiten.Image) {
 		b.canvas.DrawImage(b.labelingY, nil)
 		b.canvas.DrawImage(b.foreground, nil)
 		b.canvas.DrawImage(b.overlay, nil)
+		b.dragStart.Draw(b.canvas)
 		b.redraw = false
 	}
 	screen.DrawImage(b.canvas, nil)
@@ -137,6 +143,8 @@ func (b *Board) GetPieceType(rank, file uint8) (uint8, bool) {
 }
 
 func (b *Board) DragBegin(index, pieceType uint8) {
+	rank, file := ItoRF(index)
+	b.dragStart.Update(RFtoXY(rank, file, b.squareSize))
 	b.generateForeground()
 }
 
@@ -144,13 +152,13 @@ func (b *Board) DragEnd(from, to, pieceType uint8, cancelled bool) {
 	if !cancelled {
 		b.engine.MovePiece(from, to, pieceType)
 	}
+	b.dragStart.Hide()
 	b.generateForeground()
 }
 
 func (b *Board) DragOver(index, pieceType uint8) {}
 
 func (b *Board) generateForeground() {
-	fmt.Println("Generating foreground")
 	dragIndex := -1
 	if b.selector.IsDragging() {
 		dragIndex = int(b.selector.DragIndex())
@@ -164,28 +172,29 @@ bit:
 		}
 		bit := uint64(1 << (63 - i))
 		player := PlayerWhite
-		if bitBoards[engine.BitBlack]&bit != 0 {
+		if bitBoards[BitBlack]&bit != 0 {
 			player = PlayerBlack
 		}
 		var piece *graphics.Piece
 		switch {
-		case bitBoards[engine.BitPawns]&bit != 0:
+		case bitBoards[BitPawns]&bit != 0:
 			piece = graphics.GetPiece(PiecePawn | player)
-		case bitBoards[engine.BitKnights]&bit != 0:
+		case bitBoards[BitKnights]&bit != 0:
 			piece = graphics.GetPiece(PieceKnight | player)
-		case bitBoards[engine.BitBishops]&bit != 0:
+		case bitBoards[BitBishops]&bit != 0:
 			piece = graphics.GetPiece(PieceBishop | player)
-		case bitBoards[engine.BitRooks]&bit != 0:
+		case bitBoards[BitRooks]&bit != 0:
 			piece = graphics.GetPiece(PieceRook | player)
-		case bitBoards[engine.BitQueens]&bit != 0:
+		case bitBoards[BitQueens]&bit != 0:
 			piece = graphics.GetPiece(PieceQueen | player)
-		case bitBoards[engine.BitKings]&bit != 0:
+		case bitBoards[BitKings]&bit != 0:
 			piece = graphics.GetPiece(PieceKing | player)
 		default:
 			continue bit
 		}
 		piece.Draw(b.foreground, b.foregroundOp[i])
 	}
+	b.regenerate = false
 	b.redraw = true
 }
 

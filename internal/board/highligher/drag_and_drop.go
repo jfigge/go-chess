@@ -42,16 +42,16 @@ func NewDragAndDrop(highlighter DragHighlighter, squareSize int, dragColor, back
 func (d *DragAndDrop) Update(x, y int) bool {
 	changed := d.Highlight.Update(x, y)
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) && d.visible && d.piece != nil {
-		d.dragOffsetX = int(d.highlightX) - x
-		d.dragOffsetY = int(d.highlightY) - y
+		d.dragPiece = d.piece
+		d.dragOffsetX = d.highlightX - x
+		d.dragOffsetY = d.highlightY - y
 		d.draggingOp.GeoM.Reset()
 		d.draggingOp.GeoM.Translate(float64(x+d.dragOffsetX), float64(y+d.dragOffsetY))
 		d.dragIndex = d.index
 		d.dragOver = d.index
-		d.dragPiece = d.piece
+		d.Highlight.background = d.dragColor
 		d.dragging = true
 		changed = true
-		d.Highlight.background = d.dragColor
 		d.highlighter.DragBegin(d.dragOver, d.dragPiece.Type())
 	} else if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
 		d.dragging = false
@@ -68,6 +68,11 @@ func (d *DragAndDrop) Update(x, y int) bool {
 		}
 	}
 	return changed
+}
+
+func (d *DragAndDrop) Hide() {
+	d.CancelDrag()
+	d.Highlight.Hide()
 }
 
 func (d *DragAndDrop) IsDragging() bool {

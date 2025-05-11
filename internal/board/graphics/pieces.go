@@ -31,7 +31,7 @@ var (
 var (
 	//go:embed assets/*.png
 	assets embed.FS
-	sheet  = mustLoadImage("assets/pieces.png")
+	sheet  = mustLoadImage("assets/pieces2.png")
 )
 
 func mustLoadImage(name string) *ebiten.Image {

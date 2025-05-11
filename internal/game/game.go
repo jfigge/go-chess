@@ -16,7 +16,6 @@ type Game struct {
 }
 
 func NewGame() *Game {
-	ebiten.SetTPS(20)
 	ebiten.SetVsyncEnabled(true)
 	ebiten.SetScreenClearedEveryFrame(false)
 	eng := engine.NewEngine()
