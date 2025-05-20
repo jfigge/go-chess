@@ -41,3 +41,13 @@ func OptHighlightRGBA(red, green, blue, alpha uint8) Option {
 		b.colors.SetHighlight(&color.RGBA{R: red, G: green, B: blue, A: alpha})
 	}
 }
+func OptDragStartRGBA(red, green, blue, alpha uint8) Option {
+	return func(b *Board) {
+		b.colors.SetDragStart(&color.RGBA{R: red, G: green, B: blue, A: alpha})
+	}
+}
+func OptEnPassantRGBA(red, green, blue, alpha uint8) Option {
+	return func(b *Board) {
+		b.colors.SetEnPassant(&color.RGBA{R: red, G: green, B: blue, A: alpha})
+	}
+}

@@ -5,7 +5,8 @@ import (
 )
 
 const (
-	notation = "abcdefgh"
+	boardPattern uint64 = 6172840429334713770
+	notation            = "abcdefgh"
 )
 
 const (
@@ -28,8 +29,10 @@ const (
 // Castling rights stored in status
 const (
 	CastleRightsMask       uint8 = 0b00011110
+	CastleRightsWhiteMask  uint8 = 0b00000110
 	CastleRightsWhiteKing  uint8 = 0b00000010
 	CastleRightsWhiteQueen uint8 = 0b00000100
+	CastleRightsBlackMask  uint8 = 0b00011000
 	CastleRightsBlackKing  uint8 = 0b00001000
 	CastleRightsBlackQueen uint8 = 0b00010000
 )
@@ -97,6 +100,9 @@ func NtoRF(n string) (uint8, uint8, bool) {
 func RFtoN(rank, file uint8) string {
 	return string(notation[file-1]) + string(rank+'0')
 }
+func FtoN(file uint8) string {
+	return string(notation[file-1])
+}
 
 func XYtoRF(x, y, squareSize int) (uint8, uint8, bool) {
 	rank := uint8(8 - (y)/squareSize)
@@ -109,4 +115,9 @@ func XYtoRF(x, y, squareSize int) (uint8, uint8, bool) {
 
 func RFtoXY(rank, file uint8, squareSize int) (int, int) {
 	return int(file-1) * squareSize, int(8-rank) * squareSize
+}
+
+func SquareColor(rank, file uint8) uint64 {
+	i := RFtoI(rank, file)
+	return (boardPattern >> (63 - i)) & 1
 }

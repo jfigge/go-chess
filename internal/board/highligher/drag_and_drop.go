@@ -17,8 +17,8 @@ type DragHighlighter interface {
 type DragAndDrop struct {
 	*Highlight
 	highlighter DragHighlighter
-	background  color.Color
-	dragColor   color.Color
+	background  [2]color.Color
+	dragColor   [2]color.Color
 	draggingOp  *ebiten.DrawImageOptions
 	dragOffsetX int
 	dragOffsetY int
@@ -28,7 +28,7 @@ type DragAndDrop struct {
 	dragging    bool
 }
 
-func NewDragAndDrop(highlighter DragHighlighter, squareSize int, dragColor, background color.Color) *DragAndDrop {
+func NewDragAndDrop(highlighter DragHighlighter, squareSize int, background, dragColor [2]color.Color) *DragAndDrop {
 	dd := &DragAndDrop{
 		Highlight:   NewHighlight(highlighter, squareSize, background),
 		highlighter: highlighter,
@@ -53,20 +53,24 @@ func (d *DragAndDrop) Update(x, y int) bool {
 		d.dragging = true
 		changed = true
 		d.highlighter.DragBegin(d.dragOver, d.dragPiece.Type())
-	} else if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
-		d.dragging = false
-		changed = true
-		d.Highlight.background = d.background
-		d.highlighter.DragEnd(d.dragIndex, d.dragOver, d.dragPiece.Type(), d.dragOver == d.dragIndex || !d.visible)
 	} else if d.dragging {
-		d.draggingOp.GeoM.Reset()
-		d.draggingOp.GeoM.Translate(float64(x+d.dragOffsetX), float64(y+d.dragOffsetY))
-		moved := d.dragOver != d.Highlight.index
-		d.dragOver = d.Highlight.index
-		if moved {
-			d.highlighter.DragOver(d.dragOver, d.dragPiece.Type())
+		if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
+			d.dragging = false
+			changed = true
+			d.Highlight.background = d.background
+			d.highlighter.DragEnd(d.dragIndex, d.dragOver, d.dragPiece.Type(), d.dragOver == d.dragIndex || !d.visible)
+		} else {
+			d.draggingOp.GeoM.Reset()
+			d.draggingOp.GeoM.Translate(float64(x+d.dragOffsetX), float64(y+d.dragOffsetY))
+			moved := d.dragOver != d.Highlight.index
+			d.dragOver = d.Highlight.index
+			if moved {
+				d.highlighter.DragOver(d.dragOver, d.dragPiece.Type())
+			}
 		}
+
 	}
+
 	return changed
 }
 

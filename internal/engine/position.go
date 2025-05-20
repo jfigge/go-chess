@@ -13,6 +13,8 @@ var (
 	kingMoves      [64]uint64
 	whitePawnMoves [64]uint64
 	blackPawnMoves [64]uint64
+	ranks          [8]uint64
+	files          [8]uint64
 	fenPieceMap    = map[byte]uint8{
 		'P': PlayerWhite | PiecePawn,
 		'N': PlayerWhite | PieceKnight,
@@ -30,11 +32,12 @@ var (
 )
 
 const (
-	fen   = "PpNnBbRrQqKk"
-	RANK8 = 0xFF00000000000000
-	RANK1 = 0x00000000000000FF
-	FileA = 0x0101010101010101
-	FileH = 0x8080808080808080
+	fen       = "PpNnBbRrQqKk"
+	algebraic = " NBRQK"
+	RANK8     = 0xFF00000000000000
+	RANK1     = 0x00000000000000FF
+	FileA     = 0x0101010101010101
+	FileH     = 0x8080808080808080
 )
 
 type Position struct {
@@ -82,15 +85,11 @@ func (p *Position) SetEnPassant(rank, file uint8) {
 func (p *Position) ClearEnPassant() {
 	p.bitboards[BitEnPassant] = 0
 }
-func (p *Position) SetPiece(pieceType uint8, rank, file uint8) bool {
+func (p *Position) SetPiece(pieceType uint8, rank, file uint8) {
 	bit := RFtoB(rank, file)
 	pb, cb := PTtoBB(pieceType)
-	if p.bitboards[pb]&bit != 0 || p.bitboards[cb]&bit != 0 {
-		return false
-	}
 	p.bitboards[pb] |= bit
 	p.bitboards[cb] |= bit
-	return true
 }
 func (p *Position) RemovePiece(pieceType uint8, rank, file uint8) {
 	notBit := ^RFtoB(rank, file)
@@ -98,15 +97,107 @@ func (p *Position) RemovePiece(pieceType uint8, rank, file uint8) {
 	p.bitboards[pb] &= notBit
 	p.bitboards[cb] &= notBit
 }
-func (p *Position) MovePiece(fromIndex, toIndex, pieceType uint8) bool {
-	rank, file := ItoRF(toIndex)
-	if !p.SetPiece(pieceType, rank, file) {
-		return false
+func (p *Position) MovePiece(fromIndex, toIndex, pieceType uint8) (string, bool) {
+	p.ClearEnPassant()
+	move, moved := p.specialMove(fromIndex, toIndex, pieceType)
+	if !moved {
+		fromRank, fromFile := ItoRF(fromIndex)
+		toRank, toFile := ItoRF(toIndex)
+
+		// Find piece at destination location
+		bit := ItoB(toIndex)
+		targetPiece, found := p.identifyPiece(bit)
+
+		// Cannot move on top of own piece
+		if found && targetPiece&PlayerMask == pieceType&PlayerMask {
+			return "Square is occupied by players own piece", false
+		}
+
+		// Determine if piece is a pawn
+		piece := pieceType & PieceMask >> 1
+		if found && piece == PiecePawn {
+			move += FtoN(fromFile)
+		} else if piece != PiecePawn { // TODO: sames pieces, same ToIndex - Add N<file>xx, same file, use rank, not file
+			move += string(algebraic[piece])
+		} else if fromIndex-toIndex == 16 && fromIndex >= 48 && fromIndex <= 55 {
+			fmt.Printf("EnPassant: %s\n", RFtoN(fromRank+1, fromFile))
+			p.SetEnPassant(fromRank+1, fromFile)
+		} else if toIndex-fromIndex == 16 && fromIndex >= 8 && fromIndex <= 15 {
+			fmt.Printf("EnPassant: %s\n", RFtoN(fromRank-1, fromFile))
+			p.SetEnPassant(fromRank-1, fromFile)
+		}
+
+		// Remove piece from source location
+		p.RemovePiece(pieceType, fromRank, fromFile)
+
+		// Remove captured piece if found
+		if found {
+			move += "x"
+			p.RemovePiece(targetPiece, toRank, toFile)
+		}
+		// Set piece at destination location
+		p.SetPiece(pieceType, toRank, toFile)
+		move += RFtoN(toRank, toFile)
 	}
-	rank, file = ItoRF(fromIndex)
-	p.RemovePiece(pieceType, rank, file)
-	return true
+
+	// Update half move count
+
+	// Update full move count
+	if p.Turn() == PlayerBlack {
+		p.fullMoves++
+	}
+
+	// Return move notification
+	return move, true
 }
+
+func (p *Position) specialMove(fromIndex uint8, toIndex uint8, pieceType uint8) (string, bool) {
+	player := pieceType & PlayerMask
+	castleRights := p.CastleRights()
+	if fromIndex == 60 && toIndex == 62 && player == PlayerWhite {
+		if castleRights&CastleRightsWhiteKing != 0 {
+			p.SetCastleRights(castleRights & CastleRightsBlackMask)
+			p.castle(60, 62, 63, 61, PlayerWhite)
+			return "O-O", true
+		}
+	} else if fromIndex == 60 && toIndex == 58 && player == PlayerWhite {
+		if castleRights&CastleRightsWhiteQueen != 0 {
+			p.SetCastleRights(castleRights & CastleRightsBlackMask)
+			p.castle(60, 58, 56, 59, PlayerWhite)
+			return "O-O-O", true
+		}
+	} else if fromIndex == 4 && toIndex == 6 && player == PlayerBlack {
+		if castleRights&CastleRightsBlackKing != 0 {
+			p.SetCastleRights(castleRights & CastleRightsWhiteMask)
+			p.castle(4, 6, 7, 5, PlayerBlack)
+			return "O-O", true
+		}
+	} else if fromIndex == 4 && toIndex == 2 && player == PlayerBlack {
+		if castleRights&CastleRightsBlackQueen != 0 {
+			p.SetCastleRights(castleRights & CastleRightsWhiteMask)
+			p.castle(4, 2, 0, 3, PlayerBlack)
+			return "O-O-O", true
+		}
+	}
+	return "", false
+}
+
+func (p *Position) castle(kingFrom, kingTo, rookFrom, rookTo, player uint8) {
+	// Move the king
+	rank, file := ItoRF(kingTo)
+	p.SetPiece(PieceKing|player, rank, file)
+
+	// Move the rook
+	rank, file = ItoRF(rookTo)
+	p.SetPiece(PieceRook|player, rank, file)
+
+	// Clear the squares
+	rank, file = ItoRF(kingFrom)
+	p.RemovePiece(PieceKing|player, rank, file)
+	rank, file = ItoRF(rookFrom)
+	p.RemovePiece(PieceRook|player, rank, file)
+}
+
 func (p *Position) ClearSquare(rank, file uint8) {
 	notBit := ^RFtoB(rank, file)
 	for bb := BitWhite; bb <= BitKings; bb++ {
@@ -127,10 +218,6 @@ func (p *Position) identifyPiece(bit uint64) (uint8, bool) {
 }
 
 func (p *Position) SetupBoard(fen string) {
-	fen = strings.TrimSpace(fen)
-	if fen == "" {
-		fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-	}
 	p.fullMoves = 0
 	p.halfMoves = make([]uint64, 0)
 	p.bitboards = [9]uint64{}
@@ -330,7 +417,7 @@ func (p *Position) debugPrintBoard() {
 	}
 	fmt.Print("\n   a b c d e f g h\n")
 }
-func debugPrintBitBoard(bitboard uint64, b uint64) {
+func (p *Position) debugPrintBitBoard(bitboard uint64, b uint64) {
 	fmt.Printf("Bit Index: %d\n", b)
 	for rank := uint8(8); rank >= 1; rank-- {
 		fmt.Printf("%d  ", rank)
@@ -364,9 +451,17 @@ func init() {
 	//	}
 	//	keys[i] = binary.BigEndian.Uint64(bs)
 	//}
+	generateRanksAndFiles()
 	generateKnightMoves()
 	generateKingMoves()
 	generatePawnMoves()
+}
+
+func generateRanksAndFiles() {
+	for i := uint8(0); i < 8; i++ {
+		ranks[i] = 0xFF << (i * 8)
+		files[i] = 0x0101010101010101 << i
+	}
 }
 
 func generateKnightMoves() {

@@ -1,6 +1,8 @@
 package colors
 
-import "image/color"
+import (
+	"image/color"
+)
 
 type Colors struct {
 	black       color.Color
@@ -10,6 +12,7 @@ type Colors struct {
 	invalid     color.Color
 	highlight   color.Color
 	dragStart   color.Color
+	enPassant   color.Color
 }
 
 func NewColors() *Colors {
@@ -17,11 +20,12 @@ func NewColors() *Colors {
 		black:       &color.RGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xff},
 		playerWhite: &color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff},
 		playerBlack: &color.RGBA{R: 0x88, G: 0x88, B: 0x88, A: 0xff},
-		//valid:       &color.RGBA{R: 0x44, G: 0xff, B: 0x44, A: 0xff},
-		valid:     &color.RGBA{R: 0xcc, G: 0x88, B: 0x88, A: 0xff},
+		valid:       &color.RGBA{R: 0x00, G: 0x55, B: 0x00, A: 0xcc},
+		//valid:     &color.RGBA{R: 0x55, G: 0x55, B: 0x55, A: 0xcc},
 		invalid:   &color.RGBA{R: 0xff, G: 0x44, B: 0x44, A: 0xff},
-		highlight: &color.RGBA{R: 0x88, G: 0x22, B: 0x22, A: 0xff},
-		dragStart: &color.RGBA{R: 0xff, G: 0xff, B: 0x9f, A: 0xff},
+		highlight: &color.RGBA{R: 0x70, G: 0x18, B: 0x18, A: 0x0},
+		dragStart: &color.RGBA{R: 0xff, G: 0xff, B: 0x00, A: 0x80},
+		enPassant: &color.RGBA{R: 0x00, G: 0xff, B: 0xff, A: 0x80},
 	}
 }
 
@@ -52,6 +56,9 @@ func (c *Colors) Foreground() color.Color {
 func (c *Colors) DragStart() color.Color {
 	return c.dragStart
 }
+func (c *Colors) EnPassant() color.Color {
+	return c.enPassant
+}
 func (c *Colors) SetPlayerWhite(newColor *color.RGBA) {
 	c.playerWhite = newColor
 }
@@ -69,4 +76,27 @@ func (c *Colors) SetHighlight(newColor *color.RGBA) {
 }
 func (c *Colors) SetDragStart(newColor *color.RGBA) {
 	c.dragStart = newColor
+}
+func (c *Colors) SetEnPassant(newColor *color.RGBA) {
+	c.enPassant = newColor
+}
+
+func (c *Colors) Tints(tint color.Color) [2]color.Color {
+	return [2]color.Color{
+		tintColor(c.playerWhite, tint),
+		tintColor(c.playerBlack, tint),
+	}
+}
+
+func tintColor(base, tint color.Color) color.Color {
+	r, g, b, a := base.RGBA()
+	tr, tg, tb, ta := tint.RGBA()
+	t := float32(ta&0xff) / 0xff
+	ti := 1 - t
+	return &color.RGBA{
+		R: uint8(float32(r&0xff)*t + float32(tr&0xff)*ti),
+		G: uint8(float32(g&0xff)*t + float32(tg&0xff)*ti),
+		B: uint8(float32(b&0xff)*t + float32(tb&0xff)*ti),
+		A: uint8(a),
+	}
 }

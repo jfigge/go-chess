@@ -41,6 +41,8 @@ type Board struct {
 	rehighlight bool
 	selector    *highligher.DragAndDrop
 	dragStart   *highligher.Highlight
+	enPassant   *highligher.Highlight
+	validMoves  []*highligher.ValidMove
 
 	// Debugging
 	debugEnabled bool
@@ -77,8 +79,9 @@ func (b *Board) Initialize() {
 	b.labelingXOp = &ebiten.DrawImageOptions{}
 	b.labelingXOp.GeoM.Translate(0, float64(b.squareSize*8)-h)
 	b.labelingY = ebiten.NewImage(int(w), b.squareSize*8)
-	b.selector = highligher.NewDragAndDrop(b, b.squareSize, b.colors.Valid(), b.colors.Highlight())
-	b.dragStart = highligher.NewHighlight(b, b.squareSize, b.colors.DragStart())
+	b.selector = highligher.NewDragAndDrop(b, b.squareSize, b.colors.Tints(b.colors.Highlight()), b.colors.Tints(b.colors.Valid()))
+	b.dragStart = highligher.NewHighlight(b, b.squareSize, b.colors.Tints(b.colors.DragStart()))
+	b.enPassant = highligher.NewHighlight(b, b.squareSize, b.colors.Tints(b.colors.EnPassant()))
 
 	for i := range 8 {
 		b.debugY = b.squareSize*8 + 1
@@ -104,6 +107,10 @@ func (b *Board) Draw(screen *ebiten.Image) {
 	if b.rehighlight || b.redraw {
 		b.highlights.Clear()
 		b.selector.Draw(b.highlights)
+		b.enPassant.Draw(b.highlights)
+		for i := range b.validMoves {
+			b.validMoves[i].Draw(b.highlights)
+		}
 		b.rehighlight = false
 		b.redraw = true
 	}
@@ -128,8 +135,8 @@ func (b *Board) Draw(screen *ebiten.Image) {
 		if b.selector != nil {
 			b.selector.Debug(screen, b.debugX, b.debugY)
 		}
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %0.0f", ebiten.ActualTPS()), b.debugX[7], b.debugY)
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X,Y:%d,%d", b.lastCursorX, b.lastCursorY), b.debugX[2], b.debugY)
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X,Y:%d,%d", b.lastCursorX, b.lastCursorY), b.debugX[6], b.debugY)
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("  TPS: %0.0f", ebiten.ActualTPS()), b.debugX[7], b.debugY)
 	}
 }
 
@@ -145,18 +152,42 @@ func (b *Board) GetPieceType(rank, file uint8) (uint8, bool) {
 func (b *Board) DragBegin(index, pieceType uint8) {
 	rank, file := ItoRF(index)
 	b.dragStart.Update(RFtoXY(rank, file, b.squareSize))
+	b.updateValidMoves(index, pieceType)
 	b.generateForeground()
+}
+
+func (b *Board) DragOver(index, pieceType uint8) {
+	b.updateValidMoves(index, pieceType)
+	b.rehighlight = true
 }
 
 func (b *Board) DragEnd(from, to, pieceType uint8, cancelled bool) {
-	if !cancelled {
-		b.engine.MovePiece(from, to, pieceType)
-	}
 	b.dragStart.Hide()
+	b.rehighlight = true
+	b.validMoves = nil
+	if !cancelled {
+		msg, ok := b.engine.MovePiece(from, to, pieceType)
+		if ok {
+			fmt.Printf("Move: %s\n", msg)
+			if epi, ok := b.engine.GetEnPassant(); ok {
+				b.enPassant.UpdateByIndex(epi)
+			} else {
+				b.enPassant.Hide()
+			}
+		}
+	}
 	b.generateForeground()
 }
 
-func (b *Board) DragOver(index, pieceType uint8) {}
+func (b *Board) updateValidMoves(index, pieceType uint8) {
+	b.validMoves = nil
+	rank, file := ItoRF(index)
+	getMoves := b.engine.GetMoves(rank, file, pieceType)
+	for i := range getMoves {
+		valid := highligher.NewValidMove(b, b.squareSize, b.colors.Tints(b.colors.Valid()), getMoves[i])
+		b.validMoves = append(b.validMoves, valid)
+	}
+}
 
 func (b *Board) generateForeground() {
 	dragIndex := -1
@@ -203,7 +234,7 @@ func (b *Board) generateBackground() {
 	oddEven := 0
 	clr := []color.Color{b.colors.PlayerWhite(), b.colors.PlayerBlack()}
 
-	_, h := graphics.TextSize("8", b.labelFontSize-2)
+	w, _ := graphics.TextSize("8", b.labelFontSize-2)
 	for i := range 8 {
 		for j := range 8 {
 			index := i*8 + j
@@ -213,12 +244,10 @@ func (b *Board) generateBackground() {
 			vector.DrawFilledRect(b.background, float32(i)*s, float32(j)*s, s, s, clr[oddEven], false)
 			oddEven = 1 - oddEven
 		}
-		if i == 0 {
-			graphics.TextAt(b.labelingX, "A1", 0, 0, b.labelFontSize, clr[oddEven])
-		} else {
-			graphics.TextAt(b.labelingX, string([]byte{byte('A' + i)}), i*b.squareSize, 0, b.labelFontSize, clr[oddEven])
-			graphics.TextAt(b.labelingY, strconv.Itoa(i+1), 0, (8-i)*b.squareSize-int(h), b.labelFontSize, clr[oddEven])
-		}
+		wp, _ := graphics.TextSize(strconv.Itoa(i+1), b.labelFontSize-2)
+
+		graphics.TextAt(b.labelingX, string([]byte{byte('A' + i)}), (i+1)*b.squareSize-int(w*1.5), 0, b.labelFontSize, clr[oddEven])
+		graphics.TextAt(b.labelingY, strconv.Itoa(i+1), int((w-wp)/2), (7-i)*b.squareSize, b.labelFontSize, clr[oddEven])
 		oddEven = 1 - oddEven
 	}
 }

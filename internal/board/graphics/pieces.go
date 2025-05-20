@@ -15,9 +15,17 @@ type Piece struct {
 }
 
 var (
-	names    = [6]string{"Pawn", "Knight", "Bishop", "Rook", "Queen", "King"}
-	colors   = [2]string{"White", "Black"}
-	imageMap = map[uint8]uint8{
+	names  = [6]string{"Pawn", "Knight", "Bishop", "Rook", "Queen", "King"}
+	colors = [2]string{"White", "Black"}
+	pieces map[uint8]*Piece
+)
+
+var (
+	//go:embed assets/*.png
+	assets    embed.FS
+	sheet     = mustLoadImage("assets/pieces2.png")
+	imageMap  = imageMap2
+	imageMap1 = map[uint8]uint8{
 		PiecePawn:   0b01010000,
 		PieceKnight: 0b00110000,
 		PieceBishop: 0b00100000,
@@ -25,13 +33,14 @@ var (
 		PieceQueen:  0b00010000,
 		PieceKing:   0b00000000,
 	}
-	pieces map[uint8]*Piece
-)
-
-var (
-	//go:embed assets/*.png
-	assets embed.FS
-	sheet  = mustLoadImage("assets/pieces2.png")
+	imageMap2 = map[uint8]uint8{
+		PiecePawn:   0b01010000,
+		PieceRook:   0b00000000,
+		PieceKnight: 0b00010000,
+		PieceBishop: 0b00100000,
+		PieceQueen:  0b00110000,
+		PieceKing:   0b01000000,
+	}
 )
 
 func mustLoadImage(name string) *ebiten.Image {
