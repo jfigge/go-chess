@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 	"image/color"
 	"strconv"
+	"strings"
 	"us.figge.chess/internal/board/graphics"
 	. "us.figge.chess/internal/common"
 )
@@ -18,7 +19,7 @@ type Highlighter interface {
 type Highlight struct {
 	highlighter Highlighter
 	squareSize  int
-	background  color.Color
+	background  [2]color.Color
 	visible     bool
 	index       uint8
 	cursorX     int
@@ -27,10 +28,11 @@ type Highlight struct {
 	cursorFile  uint8
 	highlightX  int
 	highlightY  int
+	notation    string
 	piece       *graphics.Piece
 }
 
-func NewHighlight(highlighter Highlighter, squareSize int, background color.Color) *Highlight {
+func NewHighlight(highlighter Highlighter, squareSize int, background [2]color.Color) *Highlight {
 	h := &Highlight{
 		visible:     false,
 		index:       0xff,
@@ -61,31 +63,50 @@ func (h *Highlight) Update(x, y int) bool {
 	h.cursorFile = file
 	h.highlightX = hx
 	h.highlightY = hy
-
+	h.notation = strings.ToUpper(RFtoN(rank, file))
 	pieceType, present := h.highlighter.GetPieceType(rank, file)
 	if present {
+		ebiten.SetCursorShape(ebiten.CursorShapeMove)
 		h.piece = graphics.GetPiece(pieceType)
 	} else {
+		ebiten.SetCursorShape(ebiten.CursorShapeDefault)
 		h.piece = nil
 	}
 	return true
 }
 
+func (h *Highlight) UpdateByIndex(index uint8) {
+	h.index = index
+	h.cursorRank, h.cursorFile = ItoRF(index)
+	h.highlightX, h.highlightY = RFtoXY(h.cursorRank, h.cursorFile, h.squareSize)
+	h.visible = true
+}
+
 func (h *Highlight) Hide() {
 	h.visible = false
 }
+func (h *Highlight) IsVisible() bool {
+	return h.visible
+}
+
 func (h *Highlight) Draw(dst *ebiten.Image) {
 	if h.visible {
-		vector.DrawFilledRect(dst, float32(h.highlightX), float32(h.highlightY), float32(h.squareSize), float32(h.squareSize), h.background, false)
+		vector.DrawFilledRect(
+			dst,
+			float32(h.highlightX),
+			float32(h.highlightY),
+			float32(h.squareSize),
+			float32(h.squareSize),
+			h.background[SquareColor(h.cursorRank, h.cursorFile)], false,
+		)
 	}
 }
 
 func (h *Highlight) Debug(screen *ebiten.Image, debugX [8]int, debugY int) {
 	if h.visible {
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("R,F: %d,%d", h.cursorRank, h.cursorFile), debugX[1], debugY)
-		ebitenutil.DebugPrintAt(screen, "Index: "+strconv.Itoa(int(h.index)), debugX[0], debugY)
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("I:%s, N:%s", strconv.Itoa(int(h.index)), h.notation), debugX[0], debugY)
 		if h.piece != nil {
-			ebitenutil.DebugPrintAt(screen, h.piece.ColorName()+" "+h.piece.Name(), debugX[4], debugY)
+			ebitenutil.DebugPrintAt(screen, h.piece.ColorName()+" "+h.piece.Name(), debugX[1], debugY)
 		}
 	}
 }
