@@ -79,6 +79,9 @@ func (e *Engine) GetPieceType(rank, file uint8) (uint8, bool) {
 	return e.position.identifyPiece(RFtoB(rank, file))
 }
 
+func (e *Engine) Turn() uint8 {
+	return e.position.Turn()
+}
 func (e *Engine) MovePiece(from, to, pieceType uint8) (string, bool) {
 	return e.position.MovePiece(from, to, pieceType)
 	//if e.cpuPlayer {

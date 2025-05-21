@@ -98,3 +98,6 @@ func (p *Piece) Draw(dst *ebiten.Image, op *ebiten.DrawImageOptions) {
 func (p *Piece) Name() string      { return p.name }
 func (p *Piece) ColorName() string { return p.color }
 func (p *Piece) Type() uint8       { return p.pieceType }
+func TurnName(turn uint8) string {
+	return colors[turn]
+}

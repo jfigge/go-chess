@@ -144,6 +144,7 @@ func (b *Board) Draw(screen *ebiten.Image) {
 		if b.selector != nil {
 			b.selector.Debug(screen, b.debugX, b.debugY)
 		}
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Turn: "+graphics.TurnName(b.engine.Turn())), b.debugX[5], b.debugY)
 		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X,Y:%d,%d", b.lastCursorX, b.lastCursorY), b.debugX[6], b.debugY)
 		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("  TPS: %0.0f", ebiten.ActualTPS()), b.debugX[7], b.debugY)
 	}

@@ -146,6 +146,7 @@ func (p *Position) MovePiece(fromIndex, toIndex, pieceType uint8) (string, bool)
 	if p.Turn() == PlayerBlack {
 		p.fullMoves++
 	}
+	p.SetTurn(1 - p.Turn()) // Switch turn
 
 	// Return move notification
 	return move, true
