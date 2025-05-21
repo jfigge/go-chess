@@ -1,4 +1,4 @@
-package highligher
+package highlighers
 
 import (
 	"fmt"
@@ -66,7 +66,7 @@ func (h *Highlight) Update(x, y int) bool {
 	h.notation = strings.ToUpper(RFtoN(rank, file))
 	pieceType, present := h.highlighter.GetPieceType(rank, file)
 	if present {
-		ebiten.SetCursorShape(ebiten.CursorShapeMove)
+		ebiten.SetCursorShape(ebiten.CursorShapePointer)
 		h.piece = graphics.GetPiece(pieceType)
 	} else {
 		ebiten.SetCursorShape(ebiten.CursorShapeDefault)

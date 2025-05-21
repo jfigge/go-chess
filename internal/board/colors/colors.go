@@ -13,6 +13,7 @@ type Colors struct {
 	highlight   color.Color
 	dragStart   color.Color
 	enPassant   color.Color
+	lastMove    color.Color
 }
 
 func NewColors() *Colors {
@@ -25,7 +26,9 @@ func NewColors() *Colors {
 		invalid:   &color.RGBA{R: 0xff, G: 0x44, B: 0x44, A: 0xff},
 		highlight: &color.RGBA{R: 0x70, G: 0x18, B: 0x18, A: 0x0},
 		dragStart: &color.RGBA{R: 0xff, G: 0xff, B: 0x00, A: 0x80},
-		enPassant: &color.RGBA{R: 0x00, G: 0xff, B: 0xff, A: 0x80},
+		//enPassant: &color.RGBA{R: 0x00, G: 0xff, B: 0xff, A: 0xd0},
+		enPassant: &color.RGBA{R: 0x00, G: 0x00, B: 0xff, A: 0xd0},
+		lastMove:  &color.RGBA{R: 0xff, G: 0xff, B: 0x00, A: 0xd0},
 	}
 }
 
@@ -59,6 +62,9 @@ func (c *Colors) DragStart() color.Color {
 func (c *Colors) EnPassant() color.Color {
 	return c.enPassant
 }
+func (c *Colors) LastMove() color.Color {
+	return c.lastMove
+}
 func (c *Colors) SetPlayerWhite(newColor *color.RGBA) {
 	c.playerWhite = newColor
 }
@@ -79,6 +85,9 @@ func (c *Colors) SetDragStart(newColor *color.RGBA) {
 }
 func (c *Colors) SetEnPassant(newColor *color.RGBA) {
 	c.enPassant = newColor
+}
+func (c *Colors) SetLastMove(newColor *color.RGBA) {
+	c.lastMove = newColor
 }
 
 func (c *Colors) Tints(tint color.Color) [2]color.Color {

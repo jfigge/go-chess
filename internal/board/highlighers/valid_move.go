@@ -1,4 +1,4 @@
-package highligher
+package highlighers
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"

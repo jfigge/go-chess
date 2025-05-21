@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"us.figge.chess/internal/board/colors"
 	"us.figge.chess/internal/board/graphics"
-	"us.figge.chess/internal/board/highligher"
+	"us.figge.chess/internal/board/highlighers"
 	. "us.figge.chess/internal/common"
 	"us.figge.chess/internal/engine"
 )
@@ -39,10 +39,11 @@ type Board struct {
 	redraw      bool
 	regenerate  bool
 	rehighlight bool
-	selector    *highligher.DragAndDrop
-	dragStart   *highligher.Highlight
-	enPassant   *highligher.Highlight
-	validMoves  []*highligher.ValidMove
+	selector    *highlighers.DragAndDrop
+	dragStart   *highlighers.Highlight
+	enPassant   *highlighers.EnPassant
+	validMoves  []*highlighers.ValidMove
+	lastMove    []*highlighers.Highlight
 
 	// Debugging
 	debugEnabled bool
@@ -79,9 +80,14 @@ func (b *Board) Initialize() {
 	b.labelingXOp = &ebiten.DrawImageOptions{}
 	b.labelingXOp.GeoM.Translate(0, float64(b.squareSize*8)-h)
 	b.labelingY = ebiten.NewImage(int(w), b.squareSize*8)
-	b.selector = highligher.NewDragAndDrop(b, b.squareSize, b.colors.Tints(b.colors.Highlight()), b.colors.Tints(b.colors.Valid()))
-	b.dragStart = highligher.NewHighlight(b, b.squareSize, b.colors.Tints(b.colors.DragStart()))
-	b.enPassant = highligher.NewHighlight(b, b.squareSize, b.colors.Tints(b.colors.EnPassant()))
+	b.selector = highlighers.NewDragAndDrop(b, b.squareSize, b.colors.Tints(b.colors.Highlight()), b.colors.Tints(b.colors.Valid()))
+	b.dragStart = highlighers.NewHighlight(b, b.squareSize, b.colors.Tints(b.colors.DragStart()))
+	b.enPassant = highlighers.NewEnPassant(b, b.squareSize, b.colors.Tints(b.colors.EnPassant()))
+	b.lastMove = append(
+		b.lastMove,
+		highlighers.NewHighlight(b, b.squareSize, b.colors.Tints(b.colors.LastMove())),
+		highlighers.NewHighlight(b, b.squareSize, b.colors.Tints(b.colors.LastMove())),
+	)
 
 	for i := range 8 {
 		b.debugY = b.squareSize*8 + 1
@@ -106,6 +112,9 @@ func (b *Board) Update() error {
 func (b *Board) Draw(screen *ebiten.Image) {
 	if b.rehighlight || b.redraw {
 		b.highlights.Clear()
+		for i := range b.lastMove {
+			b.lastMove[i].Draw(b.highlights)
+		}
 		b.selector.Draw(b.highlights)
 		b.enPassant.Draw(b.highlights)
 		for i := range b.validMoves {
@@ -174,6 +183,8 @@ func (b *Board) DragEnd(from, to, pieceType uint8, cancelled bool) {
 			} else {
 				b.enPassant.Hide()
 			}
+			b.lastMove[0].UpdateByIndex(from)
+			b.lastMove[1].UpdateByIndex(to)
 		}
 	}
 	b.generateForeground()
@@ -184,7 +195,7 @@ func (b *Board) updateValidMoves(index, pieceType uint8) {
 	rank, file := ItoRF(index)
 	getMoves := b.engine.GetMoves(rank, file, pieceType)
 	for i := range getMoves {
-		valid := highligher.NewValidMove(b, b.squareSize, b.colors.Tints(b.colors.Valid()), getMoves[i])
+		valid := highlighers.NewValidMove(b, b.squareSize, b.colors.Tints(b.colors.Valid()), getMoves[i])
 		b.validMoves = append(b.validMoves, valid)
 	}
 }

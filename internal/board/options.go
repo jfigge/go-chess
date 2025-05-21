@@ -51,3 +51,8 @@ func OptEnPassantRGBA(red, green, blue, alpha uint8) Option {
 		b.colors.SetEnPassant(&color.RGBA{R: red, G: green, B: blue, A: alpha})
 	}
 }
+func OptLastMoveRGBA(red, green, blue, alpha uint8) Option {
+	return func(b *Board) {
+		b.colors.SetLastMove(&color.RGBA{R: red, G: green, B: blue, A: alpha})
+	}
+}
