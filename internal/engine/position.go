@@ -120,10 +120,8 @@ func (p *Position) MovePiece(fromIndex, toIndex, pieceType uint8) (string, bool)
 		} else if piece != PiecePawn { // TODO: sames pieces, same ToIndex - Add N<file>xx, same file, use rank, not file
 			move += string(algebraic[piece])
 		} else if fromIndex-toIndex == 16 && fromIndex >= 48 && fromIndex <= 55 {
-			fmt.Printf("EnPassant: %s\n", RFtoN(fromRank+1, fromFile))
 			p.SetEnPassant(fromRank+1, fromFile)
 		} else if toIndex-fromIndex == 16 && fromIndex >= 8 && fromIndex <= 15 {
-			fmt.Printf("EnPassant: %s\n", RFtoN(fromRank-1, fromFile))
 			p.SetEnPassant(fromRank-1, fromFile)
 		}
 

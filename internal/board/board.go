@@ -159,11 +159,15 @@ func (b *Board) GetPieceType(rank, file uint8) (uint8, bool) {
 	return b.engine.GetPieceType(rank, file)
 }
 
-func (b *Board) DragBegin(index, pieceType uint8) {
+func (b *Board) DragBegin(index, pieceType uint8) bool {
+	if pieceType&PlayerMask != b.engine.Turn() {
+		return false
+	}
 	rank, file := ItoRF(index)
 	b.dragStart.Update(RFtoXY(rank, file, b.squareSize))
 	b.updateValidMoves(index, pieceType)
 	b.generateForeground()
+	return true
 }
 
 func (b *Board) DragOver(index, pieceType uint8) {
@@ -178,7 +182,7 @@ func (b *Board) DragEnd(from, to, pieceType uint8, cancelled bool) {
 	if !cancelled {
 		msg, ok := b.engine.MovePiece(from, to, pieceType)
 		if ok {
-			fmt.Printf("Move: %s\n", msg)
+			fmt.Printf("%03d.  %-7s", b.engine.Fullmove(), msg)
 			if epi, ok := b.engine.GetEnPassant(); ok {
 				b.enPassant.UpdateByIndex(epi)
 			} else {
@@ -186,6 +190,11 @@ func (b *Board) DragEnd(from, to, pieceType uint8, cancelled bool) {
 			}
 			b.lastMove[0].UpdateByIndex(from)
 			b.lastMove[1].UpdateByIndex(to)
+			if engineMove, ok := b.engine.FetchMove(from, to); ok {
+				fmt.Printf("  %s\n", engineMove)
+			} else {
+				fmt.Println()
+			}
 		}
 	}
 	b.generateForeground()

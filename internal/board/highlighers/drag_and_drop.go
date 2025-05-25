@@ -9,7 +9,7 @@ import (
 
 type DragHighlighter interface {
 	Highlighter
-	DragBegin(index uint8, pieceType uint8)
+	DragBegin(index uint8, pieceType uint8) bool
 	DragOver(index uint8, pieceType uint8)
 	DragEnd(from, to uint8, pieceType uint8, cancelled bool)
 }
@@ -50,9 +50,11 @@ func (d *DragAndDrop) Update(x, y int) bool {
 		d.dragIndex = d.index
 		d.dragOver = d.index
 		d.Highlight.background = d.dragColor
-		d.dragging = true
 		changed = true
-		d.highlighter.DragBegin(d.dragOver, d.dragPiece.Type())
+		d.dragging = d.highlighter.DragBegin(d.dragOver, d.dragPiece.Type())
+		if !d.dragging {
+			d.Highlight.background = d.background
+		}
 	} else if d.dragging {
 		if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
 			d.dragging = false
@@ -68,7 +70,6 @@ func (d *DragAndDrop) Update(x, y int) bool {
 				d.highlighter.DragOver(d.dragOver, d.dragPiece.Type())
 			}
 		}
-
 	}
 
 	return changed

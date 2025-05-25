@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 	. "us.figge.chess/internal/common"
 	"us.figge.chess/internal/engine/uci"
 )
@@ -38,6 +39,7 @@ func NewEngine() *Engine {
 		Ponder:  false,
 		OwnBook: true,
 		Threads: 6,
+		Elo:     800,
 	}
 	err = e.stockfish.SetOptions(engineOptions)
 	if err != nil {
@@ -82,35 +84,35 @@ func (e *Engine) GetPieceType(rank, file uint8) (uint8, bool) {
 func (e *Engine) Turn() uint8 {
 	return e.position.Turn()
 }
+func (e *Engine) Fullmove() int {
+	return e.position.fullMoves
+}
 func (e *Engine) MovePiece(from, to, pieceType uint8) (string, bool) {
 	return e.position.MovePiece(from, to, pieceType)
-	//if e.cpuPlayer {
-	//	return true
-	//}
-	//e.moves += " " + RFtoN(ItoRF(from)) + RFtoN(ItoRF(to))
-	//err := e.stockfish.SetMoves(e.moves)
-	//if err != nil {
-	//	log.Printf("Error setting move [%s]: %v\n", e.moves, err)
-	//}
-	//var results *uci.Results
-	//results, err = e.stockfish.Go(10, "", int64(time.Second))
-	//if err != nil {
-	//	log.Printf("Error getting moves: %v\n", err)
-	//}
-	//fmt.Printf("Best move: %s\t Mate: %v\n", results.BestMove, results.Results[0].Mate)
-	//rank, file, _ := NtoRF(results.BestMove[:2])
-	//from = RFtoI(rank, file)
-	//rank, file, _ = NtoRF(results.BestMove[2:4])
-	//to = RFtoI(rank, file)
-	//pieceType, _ = e.position.identifyPiece(ItoB(from))
-	//msg, ok = e.position.MovePiece(from, to, pieceType)
-	//fmt.Println(msg)
-	//if !ok {
-	//	log.Printf("Error moving piece from %d to %d\n", from, to)
-	//	return false
-	//}
-	//e.moves += " " + results.BestMove
-	//return true
+}
+func (e *Engine) FetchMove(lastFrom, lastTo uint8) (string, bool) {
+	e.moves += " " + RFtoN(ItoRF(lastFrom)) + RFtoN(ItoRF(lastTo))
+	err := e.stockfish.SetMoves(e.moves)
+	if err != nil {
+		log.Printf("Error setting move [%s]: %v\n", e.moves, err)
+	}
+	var results *uci.Results
+	results, err = e.stockfish.Go(10, "", int64(time.Second))
+	if err != nil {
+		log.Printf("Error getting moves: %v\n", err)
+	}
+	rank, file, _ := NtoRF(results.BestMove[:2])
+	from := RFtoI(rank, file)
+	rank, file, _ = NtoRF(results.BestMove[2:4])
+	to := RFtoI(rank, file)
+	pieceType, _ := e.position.identifyPiece(ItoB(from))
+	msg, ok := e.position.MovePiece(from, to, pieceType)
+	if !ok {
+		log.Printf("Error moving piece from %d to %d\n", from, to)
+		return "", false
+	}
+	e.moves += " " + results.BestMove
+	return msg, true
 }
 
 func (e *Engine) showPieces(pieceType uint8) {

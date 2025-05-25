@@ -26,6 +26,7 @@ type Options struct {
 	Ponder  bool // whether the engine should ponder
 	OwnBook bool // whether the engine should use its opening book
 	Threads int  // max number of threads the engine should use
+	Elo     int  // Elo rating for the engine
 }
 
 // scoreKey helps us save the latest unique result where unique is
@@ -135,6 +136,16 @@ func (eng *Engine) SetOptions(opt Options) error {
 	err = eng.SendOption("ponder", opt.Ponder)
 	if err != nil {
 		return err
+	}
+	if opt.Elo > 0 {
+		err = eng.SendOption("UCI_LimitStrength", true)
+		if err != nil {
+			return err
+		}
+		err = eng.SendOption("UCI_Elo", opt.Elo)
+		if err != nil {
+			return err
+		}
 	}
 
 	return err
